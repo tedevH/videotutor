@@ -6,7 +6,7 @@ export const SITE = {
   url:
     process.env.NEXT_PUBLIC_SITE_URL ||
     (process.env.VERCEL_PROJECT_PRODUCTION_URL ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}` : "http://localhost:3000"),
-  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "support@lumotutor.com",
+  supportEmail: process.env.NEXT_PUBLIC_SUPPORT_EMAIL || "tedevh8@gmail.com",
   company: "LumoTutor",
   /** Last time the Terms and Privacy Policy changed. */
   legalUpdated: "2026-09-17",

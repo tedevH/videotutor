@@ -8,7 +8,7 @@ export default function GlobalError({ error, reset }: { error: Error & { digest?
         <main style={{ maxWidth: 480, margin: "0 auto", padding: "80px 24px", textAlign: "center" }}>
           <h1 style={{ fontSize: 28, fontWeight: 600, letterSpacing: -0.5 }}>Something broke on our side.</h1>
           <p style={{ marginTop: 12, lineHeight: 1.6, opacity: 0.75 }}>
-            Your work is saved. Try again, and if it keeps happening email support@lumotutor.com
+            Your work is saved. Try again, and if it keeps happening email tedevh8@gmail.com
             {error.digest ? ` with this code: ${error.digest}` : ""}.
           </p>
           <button
