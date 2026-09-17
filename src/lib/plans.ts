@@ -41,7 +41,7 @@ export const PLANS: Record<
       examPrep: false,
       bestModels: false,
     },
-    features: ["2 lectures a month", "Basic AI tutor", "5 practice problems a day", "Basic learning memory"],
+    features: ["2 lectures a month", "15 tutor questions a day", "5 practice problems a day", "Basic learning memory", "Whiteboard and courses"],
   },
   plus: {
     name: "Plus",
@@ -58,7 +58,9 @@ export const PLANS: Record<
     },
     features: [
       "25 hours of lectures a month",
-      "Full interactive tutoring",
+      "150 tutor questions a day",
+      "60 practice problems a day",
+      "Code-verified answers on hard problems",
       "Voice tutoring",
       "AI-drawn diagrams and whiteboard",
       "Adaptive practice",
@@ -82,7 +84,9 @@ export const PLANS: Record<
       bestModels: true,
     },
     features: [
-      "100+ hours of lectures a month",
+      "100 hours of lectures a month",
+      "400 tutor questions a day",
+      "200 practice problems a day",
       "Everything in Plus",
       "Highest-quality AI models",
       "Advanced diagrams and visualizations",

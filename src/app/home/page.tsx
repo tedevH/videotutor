@@ -3,11 +3,13 @@ import { redirect } from "next/navigation";
 import { AddVideoForm } from "@/components/add-video-form";
 import { AppNav } from "@/components/app-nav";
 import { InviteFriends } from "@/components/invite-friends";
+import { PlanUsage } from "@/components/plan-usage";
 import { syncSubscriptionFromStripe } from "@/lib/billing";
 import { effectivePlan } from "@/lib/entitlements";
 import { dueReviews } from "@/lib/brain/review";
 import { listConceptsWithMastery } from "@/lib/brain/store";
 import { createClient } from "@/lib/supabase/server";
+import { usageSummary } from "@/lib/usage";
 import { formatTime } from "@/lib/youtube";
 
 export const metadata = { title: "Home · LumoTutor" };
@@ -40,6 +42,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
     const { data: fresh } = await supabase.from("profiles").select("plan, plus_trial_until").eq("id", user.id).maybeSingle();
     plan = effectivePlan(fresh);
   }
+  const meters = await usageSummary(user.id, plan);
   const reviews = dueReviews(concepts);
   const weak = concepts.filter((c) => c.level === "shaky").sort((a, b) => b.exam_weight - a.exam_weight).slice(0, 5);
   const hour = new Date().getHours();
@@ -138,19 +141,7 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
           </div>
 
           <aside className="space-y-5">
-            <div className="flex items-center justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm">
-              <span>
-                Plan: <span className="font-semibold">{plan === "pro" ? "Pro" : plan === "plus" ? "Plus" : "Free"}</span>
-                {plan === "plus" && profile?.plan !== "plus" && profile?.plus_trial_until && (
-                  <span className="text-muted"> · free until {new Date(profile.plus_trial_until).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
-                )}
-              </span>
-              {plan !== "pro" && (
-                <Link href="/pricing" className="font-medium text-pen">
-                  {plan === "free" ? "Upgrade →" : "See Pro →"}
-                </Link>
-              )}
-            </div>
+            <PlanUsage plan={plan} meters={meters} trialUntil={plan === "plus" && profile?.plan !== "plus" ? profile?.plus_trial_until : null} />
             {plan === "free" || (profile?.plan !== "plus" && profile?.plan !== "pro") ? <InviteFriends compact /> : null}
             <section className="rounded-3xl border border-ink/10 bg-white p-5">
               <div className="flex items-center justify-between">
