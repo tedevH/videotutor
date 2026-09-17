@@ -6,6 +6,7 @@ import { Thinking, TutorMessage, UserBubble } from "@/components/chat/messages";
 import { FilePlayer } from "@/components/players/file-player";
 import { VimeoPlayer } from "@/components/players/vimeo-player";
 import { YouTubePlayer, type PlayerHandle } from "@/components/youtube-player";
+import { useSpeech } from "@/lib/use-speech";
 import { useTabCapture } from "@/lib/use-tab-capture";
 import type { StoredMessage } from "@/lib/tutor/schema";
 import { formatTime } from "@/lib/youtube";
@@ -48,6 +49,10 @@ export function WatchView(props: {
   const [error, setError] = useState<{ message: string; upgrade?: boolean } | null>(null);
   const [status, setStatus] = useState(props.initialStatus);
   const [duration, setDuration] = useState(0);
+  const [nudge, setNudge] = useState<string | null>(null);
+  const rewinds = useRef<{ at: number; to: number }[]>([]);
+  const lastSeen = useRef<{ time: number; playing: boolean; pausedSince: number | null }>({ time: 0, playing: false, pausedSince: null });
+  const nudgedAt = useRef(0);
   const [mode, setMode] = useState(props.initialMode);
 
   // Poll until the shared video index is built.
@@ -106,6 +111,43 @@ export function WatchView(props: {
   }, [messages.length, sending]);
 
   /** The core interaction: the moment the student starts typing, freeze the video and remember where. */
+  // Classroom mode: notice when the student keeps rewinding the same part, or sits paused, and offer help.
+  useEffect(() => {
+    const t = setInterval(() => {
+      const p = player.current;
+      if (!p) return;
+      const now = Date.now();
+      const time = p.currentTime();
+      const playing = p.isPlaying();
+      const prev = lastSeen.current;
+      if (prev.playing && time < prev.time - 3) {
+        rewinds.current = [...rewinds.current, { at: now, to: time }].filter((r) => now - r.at < 120_000);
+        const sameSpot = rewinds.current.filter((r) => Math.abs(r.to - time) < 45);
+        if (sameSpot.length >= 2 && now - nudgedAt.current > 120_000) {
+          nudgedAt.current = now;
+          setNudge("You've rewound this part a few times. Want Lumo to explain it?");
+        }
+      }
+      const pausedSince = playing ? null : (prev.pausedSince ?? now);
+      if (!playing && pausedAt === null && pausedSince && now - pausedSince > 45_000 && now - nudgedAt.current > 300_000 && time > 5) {
+        nudgedAt.current = now;
+        setNudge("Stuck on something here? Ask Lumo.");
+      }
+      lastSeen.current = { time, playing, pausedSince };
+    }, 1000);
+    return () => clearInterval(t);
+  }, [pausedAt]);
+
+  const speech = useSpeech({
+    onStart: () => freezeVideo(),
+    onInterim: (text) => setDraft(text),
+    onFinal: (text) => {
+      if (!text) return;
+      setDraft("");
+      void send(text);
+    },
+  });
+
   function freezeVideo() {
     if (pausedAt !== null || !player.current) return;
     // Grab the frame before pausing so YouTube's pause overlay isn't in the picture.
@@ -342,6 +384,24 @@ export function WatchView(props: {
               )}
             </p>
           )}
+          {nudge && !sending && (
+            <div className="mb-2 flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950">
+              <span className="flex-1">{nudge}</span>
+              <button
+                onClick={() => {
+                  setNudge(null);
+                  freezeVideo();
+                  input.current?.focus();
+                }}
+                className="rounded-full bg-sky-900 px-3 py-1 text-xs font-medium text-white"
+              >
+                Ask about it
+              </button>
+              <button onClick={() => setNudge(null)} className="text-xs text-sky-900/70" aria-label="Dismiss">
+                ✕
+              </button>
+            </div>
+          )}
           <div className="flex items-end gap-2">
             <textarea
               ref={input}
@@ -350,9 +410,19 @@ export function WatchView(props: {
               onChange={(e) => setDraft(e.target.value)}
               onKeyDown={onKeyDown}
               onFocus={() => window.matchMedia("(pointer: coarse)").matches && freezeVideo()}
-              placeholder="What's confusing? (typing pauses the video)"
+              placeholder={speech.listening ? "Listening…" : "What's confusing? (typing or talking pauses the video)"}
               className="max-h-40 min-h-[44px] flex-1 resize-none rounded-xl border border-line px-3 py-2.5 text-[15px] outline-none field-sizing-content focus:border-accent"
             />
+            {speech.supported && (
+              <button
+                onClick={() => (speech.listening ? speech.stop() : speech.start())}
+                aria-label={speech.listening ? "Stop listening" : "Ask out loud"}
+                title="Ask out loud: the video pauses when you start talking"
+                className={`h-[44px] w-[44px] shrink-0 rounded-xl border text-lg ${speech.listening ? "animate-pulse border-red-400 bg-red-50" : "border-line hover:bg-stone-50"}`}
+              >
+                🎙️
+              </button>
+            )}
             <button
               onClick={() => send()}
               disabled={!draft.trim() || sending}
