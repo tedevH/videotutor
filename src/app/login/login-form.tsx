@@ -6,11 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 
 const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
 
-type Mode = "signin" | "signup" | "link" | "forgot";
+type Mode = "signin" | "signup" | "forgot";
 
 /**
- * Email + password is the default so students sign in instantly (sessions persist for months).
- * Email links remain available, and "forgot password" lets link-only accounts set a password.
+ * Every account uses email + password (sessions persist for months).
+ * "Forgot password" also lets older link-only accounts set a password.
  */
 export function LoginForm({ next, initialMode = "signin" }: { next: string; initialMode?: Mode }) {
   const router = useRouter();
@@ -67,13 +67,6 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
       return setNotice("Almost done: confirm your email with the link we just sent. You only do this once; after that, sign in with your password.");
     }
 
-    if (mode === "link") {
-      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: callbackUrl(next) } });
-      setBusy(false);
-      if (error) return setError(error.message.includes("rate") ? "Too many emails sent. Try again in a bit, or sign in with a password." : error.message);
-      return setNotice("Check your email for a sign-in link.");
-    }
-
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl("/reset-password") });
     setBusy(false);
     if (resetError) return setError(resetError.message);
@@ -84,7 +77,7 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
     await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callbackUrl(next) } });
   }
 
-  const title = { signin: "Sign in", signup: "Create your account", link: "Email me a sign-in link", forgot: "Reset your password" }[mode];
+  const title = { signin: "Sign in", signup: "Create your account", forgot: "Reset your password" }[mode];
 
   return (
     <div className="mt-6">
@@ -112,7 +105,7 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
           ))}
         </div>
       )}
-      {(mode === "link" || mode === "forgot") && <p className="mb-3 font-semibold">{title}</p>}
+      {mode === "forgot" && <p className="mb-3 font-semibold">{title}</p>}
 
       {GOOGLE_ENABLED && (mode === "signin" || mode === "signup") && (
         <>
@@ -148,7 +141,7 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
           />
         )}
         <button disabled={busy} className="w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60">
-          {busy ? "One sec…" : { signin: "Sign in", signup: "Create account", link: "Send link", forgot: "Send reset link" }[mode]}
+          {busy ? "One sec…" : { signin: "Sign in", signup: "Create account", forgot: "Send reset link" }[mode]}
         </button>
       </form>
 
@@ -161,12 +154,7 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
             Forgot password?
           </button>
         )}
-        {mode !== "link" ? (
-          <button onClick={() => setMode("link")} className="text-muted hover:text-foreground">
-            Email me a link instead
-          </button>
-        ) : null}
-        {(mode === "link" || mode === "forgot") && (
+        {mode === "forgot" && (
           <button onClick={() => setMode("signin")} className="text-muted hover:text-foreground">
             ← Back to sign in
           </button>
