@@ -7,7 +7,7 @@ import { planFor } from "@/lib/entitlements";
 import { PLANS } from "@/lib/plans";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { runTutor } from "@/lib/tutor/pipeline";
-import { summarizeHistory, type ChunkRow } from "@/lib/tutor/prompt";
+import { describeBoard, summarizeHistory, type ChunkRow } from "@/lib/tutor/prompt";
 
 // Hard questions run a code-checked solve pass, which can take a minute or more.
 export const maxDuration = 300;
@@ -138,6 +138,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     tutorModel: entitlement.limits.bestModels ? process.env.GEMINI_PRO_TUTOR_MODEL || "gemini-3.5-flash" : undefined,
     conversation: summarizeHistory((history ?? []).reverse()),
     mode: session.mode === "direct" ? "direct" : "socratic",
+    surface: videoRow ? "video" : "whiteboard",
+    boardState: videoRow ? null : describeBoard((history ?? []) as { role: string; content: unknown }[]),
     studentModel: (subject) => studentModelSummary(user.id, subject),
     // Answering Lumo's question about the same moment: reuse what that exchange already worked out.
     followUp:

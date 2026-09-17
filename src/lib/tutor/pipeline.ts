@@ -21,6 +21,10 @@ export type TutorInput = {
   studentLevel: string;
   conversation: string;
   mode?: "socratic" | "direct";
+  /** "whiteboard" when the session has no video: answers must be drawn on the shared board. */
+  surface?: "video" | "whiteboard";
+  /** Ops already on the shared board, so Lumo extends the board instead of restarting it. */
+  boardState?: string | null;
   /** Loads the student-model summary once the subject is known. */
   studentModel?: (subject: string) => Promise<string>;
   /** Code-checked solving and review for hard questions (paid plans). */
@@ -84,6 +88,8 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
       question: input.question,
       mode: input.mode ?? "socratic",
       studentModel,
+      surface: input.surface ?? "video",
+      boardState: input.boardState ?? null,
     });
 
   let usage: Usage = look?.usage ?? { inputTokens: 0, outputTokens: 0 };
@@ -109,6 +115,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
     question: input.question,
     model: input.tutorModel,
     timestamp: input.timestamp,
+    surface: input.surface ?? "video",
     // Without checked work, a hard question at least gets careful reasoning.
     thinking,
   });
@@ -135,6 +142,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
           question: input.question,
           model: input.tutorModel,
           timestamp: input.timestamp,
+          surface: input.surface ?? "video",
           thinking: ThinkingLevel.MEDIUM,
         }).catch((err) => {
           console.error("revision failed", err);

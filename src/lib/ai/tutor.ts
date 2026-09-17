@@ -128,7 +128,16 @@ export async function solveWithCode(system: string, context: string) {
 /** Pass 3: answer the question, grounded in the earlier passes and (when captured) the exact frame. */
 export async function askTutor(
   system: string,
-  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel; drawingPng?: string | null; question?: string; model?: string },
+  input: {
+    context: string;
+    frameJpeg: string | null;
+    timestamp: number;
+    thinking?: ThinkingLevel;
+    drawingPng?: string | null;
+    question?: string;
+    model?: string;
+    surface?: "video" | "whiteboard";
+  },
 ): Promise<{ response: TutorResponse; model: string; usage: Usage }> {
   const model = input.model || tutorModel();
   const parts: Part[] = [{ text: input.context }];
@@ -166,7 +175,7 @@ export async function askTutor(
       const parsed = tutorResponse.safeParse(repairLatex(JSON.parse(raw)));
       if (parsed.success) {
         const response = enforceRules(parsed.data, !!input.frameJpeg, input.timestamp);
-        const problem = attempt < 2 ? teachingProblem(parsed.data, response, !!input.frameJpeg, input.question ?? "") : null;
+        const problem = attempt < 2 ? teachingProblem(parsed.data, response, !!input.frameJpeg, input.question ?? "", input.surface ?? "video") : null;
         if (!problem) return input.frameJpeg ? groundFrames(response, input.frameJpeg, model, usage) : { response, model, usage };
         // Valid JSON but a weak answer: keep it as a fallback and ask for a fix.
         lastUsable = response;
@@ -261,7 +270,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
  * Checks that an answer actually teaches: a visual it planned can be shown, questions about the screen
  * get a visual, and "explain" moves explain rather than handing over a one-liner.
  */
-function teachingProblem(raw: TutorResponse, enforced: TutorResponse, hasFrame: boolean, question: string): string | null {
+function teachingProblem(raw: TutorResponse, enforced: TutorResponse, hasFrame: boolean, question: string, surface: "video" | "whiteboard" = "video"): string | null {
   const asksForVisual = /\b(diagram|graph|draw|picture|plot|visual|show me|sketch)\b/i.test(question);
   const visuals = (r: TutorResponse) => r.blocks.filter((b) => VISUAL_TYPES.has(b.type));
   if (!hasFrame && raw.blocks.some((b) => b.type === "frame")) {
@@ -269,6 +278,17 @@ function teachingProblem(raw: TutorResponse, enforced: TutorResponse, hasFrame: 
   }
   if (raw.plan.about_screen && visuals(enforced).length === 0 && (raw.plan.visual !== "none" || raw.plan.question_type === "visual" || asksForVisual)) {
     return 'This question is about a graph/diagram on screen, so the answer must include a visual that reproduces it (e.g. a "plot" with the curve AND every line and point the video draws, a "board", "diagram", or a subject visual). Add it, and keep the explanation.';
+  }
+  // On the whiteboard, a visual the student can't see on their board is no use: it must be board ops.
+  if (surface === "whiteboard") {
+    const shown = visuals(enforced);
+    const offBoard = shown.filter((b) => b.type !== "board" && b.type !== "frame");
+    if (offBoard.length && !shown.some((b) => b.type === "board")) {
+      return `This is a whiteboard session, so the visual must be a "board" block drawn on the student's own board (a graph becomes a "graph" op, equations become "write" ops). Replace the "${offBoard[0].type}" block with a board block that builds on <board_now>, and keep the explanation.`;
+    }
+    if (!shown.length && asksForVisual) {
+      return 'The student asked you to draw something on the whiteboard. Add a "board" block with the ops that draw it, placed in free space beside their own work.';
+    }
   }
   const plotIssue = checkPlots(enforced);
   if (plotIssue) return plotIssue;

@@ -79,15 +79,27 @@ export function Whiteboard({
   steps = [],
   allowDrawing = false,
   onAskAboutDrawing,
+  captureRef,
 }: {
   title?: string;
   ops: BoardOp[];
   steps?: { step: number; narration: string }[];
   allowDrawing?: boolean;
   onAskAboutDrawing?: (png: string) => void;
+  /** Lets the page grab the current board (Lumo's work plus the student's strokes) to send with a question. */
+  captureRef?: { current: (() => Promise<string | null>) | null };
 }) {
   const maxStep = Math.max(1, ...ops.map((o) => o.step), ...steps.map((s) => s.step));
   const [step, setStep] = useState(1);
+  // New ops arrive when Lumo adds to the board; replay them from the start without remounting,
+  // so the student's own strokes stay exactly where they drew them.
+  const [shownOps, setShownOps] = useState(ops);
+  if (shownOps !== ops) {
+    // Keep everything already on the board visible; only the newly added steps animate in.
+    const drawn = Math.max(0, ...shownOps.map((o) => o.step));
+    setShownOps(ops);
+    setStep(ops.length > shownOps.length && drawn > 0 ? drawn : 1);
+  }
   const [autoplay, setAutoplay] = useState(true);
   const [run, setRun] = useState(0);
   const [drawing, setDrawing] = useState(false);
@@ -114,6 +126,15 @@ export function Whiteboard({
   }, [ops]);
   const byId = useMemo(() => new Map(ops.filter((o) => o.id).map((o) => [o.id, o])), [ops]);
   const narration = steps.find((s) => s.step === step)?.narration;
+
+  useEffect(() => {
+    if (!captureRef) return;
+    // Only worth sending when the student has drawn something: Lumo already knows its own ops from <board_now>.
+    captureRef.current = async () => (strokes.length === 0 ? null : exportPng());
+    return () => {
+      captureRef.current = null;
+    };
+  });
 
   const toBoard = (e: React.PointerEvent): Pt | null => {
     const svg = svgRef.current;

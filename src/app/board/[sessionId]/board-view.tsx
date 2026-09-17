@@ -14,6 +14,7 @@ export function BoardView(props: { sessionId: string; initialMode: "socratic" | 
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState(props.initialMode);
   const bottom = useRef<HTMLDivElement>(null);
+  const capture = useRef<(() => Promise<string | null>) | null>(null);
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -24,6 +25,8 @@ export function BoardView(props: { sessionId: string; initialMode: "socratic" | 
   async function send(text: string, drawing?: string) {
     const question = text.trim();
     if ((!question && !drawing) || sending) return;
+    // Lumo should always see the board as it stands, not just when the student presses "ask about my drawing".
+    drawing ??= (await capture.current?.()) ?? undefined;
     const optimistic: StoredMessage = {
       id: `pending-${Date.now()}`,
       role: "user",
@@ -67,11 +70,11 @@ export function BoardView(props: { sessionId: string; initialMode: "socratic" | 
           <span className="text-sm text-muted">Whiteboard</span>
         </div>
         <Whiteboard
-          key={latestBoard?.key ?? "blank"}
           title={latestBoard?.title ?? "Draw a problem, a diagram, or your attempt, then ask Lumo"}
           ops={latestBoard?.ops ?? []}
           steps={latestBoard?.steps ?? []}
           allowDrawing
+          captureRef={capture}
           onAskAboutDrawing={(png) => send(draft, png)}
         />
         {!latestBoard && (
@@ -144,13 +147,35 @@ export function BoardView(props: { sessionId: string; initialMode: "socratic" | 
   );
 }
 
-/** The big board shows Lumo's most recent board; a blank one invites the student to start. */
+/**
+ * The board is cumulative, like a real one: every board Lumo has drawn this session is kept,
+ * with later ops (and erases) applied on top, so a follow-up can add to earlier work.
+ */
 function latestBoardOf(messages: StoredMessage[]) {
-  for (let i = messages.length - 1; i >= 0; i--) {
-    const m = messages[i];
+  const ops: BoardOp[] = [];
+  const steps: { step: number; narration: string }[] = [];
+  let title: string | undefined;
+  let key = "blank";
+  let offset = 0;
+
+  for (const m of messages) {
     if (m.role !== "assistant") continue;
     const board = (m.content as TutorResponse).blocks?.find((b) => b.type === "board");
-    if (board && board.type === "board") return { key: m.id, title: board.title, ops: board.ops as BoardOp[], steps: board.steps };
+    if (!board || board.type !== "board") continue;
+    const boardOps = board.ops as BoardOp[];
+    const span = Math.max(0, ...boardOps.map((o) => o.step), ...(board.steps ?? []).map((s) => s.step));
+    const erased = new Set(boardOps.flatMap((o) => (o.op === "erase" ? o.ids : [])));
+    const replaced = new Set(boardOps.map((o) => ("id" in o && o.id ? o.id : "")).filter(Boolean));
+    // Drop anything this turn erased or redrew, then append the new ops after the old ones.
+    for (let i = ops.length - 1; i >= 0; i--) {
+      const id = "id" in ops[i] && ops[i].id ? (ops[i].id as string) : "";
+      if (id && (erased.has(id) || replaced.has(id))) ops.splice(i, 1);
+    }
+    ops.push(...boardOps.filter((o) => o.op !== "erase").map((o) => ({ ...o, step: o.step + offset })));
+    steps.push(...(board.steps ?? []).map((s) => ({ ...s, step: s.step + offset })));
+    offset += span;
+    title = board.title ?? title;
+    key = m.id;
   }
-  return null;
+  return ops.length ? { key, title, ops, steps } : null;
 }

@@ -1,3 +1,4 @@
+import type { TutorResponse } from "@/lib/tutor/schema";
 import { formatTime } from "@/lib/youtube";
 
 export type ChunkRow = {
@@ -76,6 +77,9 @@ Choose exactly one visual option in plan.visual, and include at most ONE visual 
 - "free_body": forces on an object, drawn to scale from magnitudes and angles (physics). Prefer this over "diagram" for any forces question.
 - "data_structure": arrays, linked lists, trees, graphs, or the call stack, animated frame by frame (computer science: algorithms, pointers, recursion, traversals).
 - "diagram": a physical/spatial setup (forces, vectors, structures, before/after) that is NOT on screen and cannot be a plot. Keep it simple and correct; never approximate a curve with boxes.
+
+Hard rule (whiteboard sessions): when <student> says surface: whiteboard, there is no video and the shared board is the only surface the student is looking at. Any visual you show MUST be a "board" block: it is drawn onto their actual board, step by step, next to their own work. A graph goes on the board as a "graph" op, an equation as a "write" op, a sketch as "draw" ops. Never answer a whiteboard question with a standalone "plot", "diagram" or "flow" block; the student asked you to use the board.
+- <board_now> lists what is already on the board, with each item's id. Build on it: reuse those ids, add new ops with later step numbers, "highlight" an item you're talking about, and "erase" only what is genuinely wrong or finished. Never silently redraw work that is already there, and never write over the student's own drawing (shown in <student_drawing>) — put your work in free space beside it and correct their work by highlighting the exact spot.
 
 Hard rule: if about_screen is true and <screen_now> shows a graph, curve, diagram, or animation, visual must NOT be "none": "frame" when the paused frame is available, otherwise "plot" (for math curves) or "diagram"/"flow" that reproduces what the video showed as faithfully as possible.
 
@@ -205,6 +209,10 @@ export function buildContext(opts: {
   question: string;
   mode?: "socratic" | "direct";
   studentModel?: string;
+  /** "whiteboard" when there is no video: the board IS the lesson surface. */
+  surface?: "video" | "whiteboard";
+  /** What is already drawn on the shared board, so a new board block extends it instead of starting over. */
+  boardState?: string | null;
   /** Set on follow-up turns: the screen description and verified work from the turn that started this exchange. */
   reused?: boolean;
 }) {
@@ -230,6 +238,7 @@ summary: ${opts.summary ?? "(not available)"}
 <student>
 level: ${opts.level === "high_school" ? "high school" : "college"}
 mode: ${opts.mode ?? "socratic"}
+surface: ${opts.surface ?? "video"}
 paused at: ${formatTime(opts.timestamp)} (${Math.floor(opts.timestamp)}s)
 </student>
 
@@ -240,6 +249,11 @@ ${opts.verifiedWork ? `\n<verified_work>\n${opts.verifiedWork}\n</verified_work>
 <student_model>
 ${opts.studentModel || "(new student: nothing known yet)"}
 </student_model>
+${opts.surface === "whiteboard" ? `
+<board_now>
+${opts.boardState || "(the board is blank)"}
+</board_now>
+` : ""}
 
 <available_evidence>
 ${evidence.map((e) => `- ${e}`).join("\n")}
@@ -294,3 +308,29 @@ Check every mathematical and conceptual claim against standard definitions and t
 - the actual question left unanswered
 
 Ignore style and minor wording. Return JSON {"ok": boolean, "problems": ["specific problem and the correct statement", ...]}. ok is true only if there are no problems.`;
+
+/** What is already on the shared whiteboard, so Lumo can extend, highlight or erase it by id. */
+export function describeBoard(history: { role: string; content: unknown }[]): string | null {
+  for (const m of history) {
+    if (m.role !== "assistant") continue;
+    const board = (m.content as TutorResponse).blocks?.find((b) => b.type === "board");
+    if (!board || board.type !== "board") continue;
+    const lines = board.ops
+      .filter((o) => o.op !== "erase")
+      .map((o) => {
+        const id = "id" in o && o.id ? o.id : "(no id)";
+        switch (o.op) {
+          case "write":
+            return `- ${id} [write @ ${o.x},${o.y}]: ${o.text}`;
+          case "graph":
+            return `- ${id} [graph @ ${o.x},${o.y} ${o.w}x${o.h}]: ${o.fn}`;
+          case "draw":
+            return `- ${id} [${o.shape} sketch]${o.label ? `: ${o.label}` : ""}`;
+          default:
+            return `- ${id} [${o.op}]`;
+        }
+      });
+    return lines.length ? `title: ${board.title ?? "(untitled)"}\n${lines.join("\n")}` : null;
+  }
+  return null;
+}
