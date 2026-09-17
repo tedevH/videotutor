@@ -6,6 +6,29 @@ import { z } from "zod";
  */
 const point = z.tuple([z.number(), z.number()]);
 const color = z.enum(["ink", "red", "blue", "green", "orange", "purple"]).catch("ink");
+const frameColor = z.enum(["red", "yellow", "blue", "green", "orange", "purple", "white"]).catch("yellow");
+
+/** Gemini's native spatial format: [ymin, xmin, ymax, xmax] and [y, x], normalized to 0-1000. */
+const box2d = z.tuple([z.number(), z.number(), z.number(), z.number()]);
+const yx = z.tuple([z.number(), z.number()]);
+
+const frameBase = { step: z.number().int().min(1).catch(1), color: frameColor };
+
+/**
+ * The model names a `target` in plain words; a separate detection pass (lib/ai/ground.ts)
+ * fills in the coordinates, because Gemini localizes far better in a dedicated detection call.
+ */
+export const frameAnnotation = z.object({
+  ...frameBase,
+  kind: z.enum(["circle", "box", "underline", "arrow", "label"]),
+  target: z.string().catch(""),
+  text: z.string().optional(),
+  box_2d: box2d.optional(),
+  from: yx.optional(),
+  to: yx.optional(),
+  point: yx.optional(),
+});
+export type FrameAnnotation = z.infer<typeof frameAnnotation>;
 
 const base = {
   id: z.string().optional(),
@@ -23,40 +46,58 @@ export const diagramElement = z.discriminatedUnion("kind", [
 ]);
 export type DiagramElement = z.infer<typeof diagramElement>;
 
+const steps = z.array(z.object({ step: z.number().int(), narration: z.string() })).catch([]);
+
 export const block = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), md: z.string() }),
   z.object({
     type: z.literal("diagram"),
     title: z.string().catch(""),
     elements: z.array(diagramElement).min(1),
-    steps: z.array(z.object({ step: z.number().int(), narration: z.string() })).catch([]),
+    steps,
   }),
   z.object({ type: z.literal("flow"), title: z.string().catch(""), mermaid: z.string() }),
+  z.object({ type: z.literal("frame"), title: z.string().catch(""), focus: z.string().nullable().catch(null), crop: box2d.nullable().catch(null), annotations: z.array(frameAnnotation).catch([]), steps }),
   z.object({
     type: z.literal("plot"),
     title: z.string().catch(""),
     functions: z.array(z.object({ fn: z.string(), label: z.string().optional() })).min(1),
     xDomain: z.tuple([z.number(), z.number()]).catch([-10, 10]),
     yDomain: z.tuple([z.number(), z.number()]).optional(),
+    shade: z.array(z.object({ fn: z.string(), from: z.number(), to: z.number() })).catch([]),
+    points: z.array(z.object({ x: z.number(), y: z.number(), label: z.string().optional() })).catch([]),
+    vlines: z.array(z.object({ x: z.number(), label: z.string().optional() })).catch([]),
   }),
   z.object({ type: z.literal("check_question"), question: z.string(), answer: z.string() }),
 ]);
 export type Block = z.infer<typeof block>;
 
+export const answerPlan = z.object({
+  on_screen: z.string().catch(""),
+  about_screen: z.boolean().catch(false),
+  question_type: z.enum(["conceptual", "procedural", "factual", "visual", "follow_up", "off_topic"]).catch("conceptual"),
+  visual: z.enum(["none", "frame", "plot", "diagram", "flow"]).catch("none"),
+  why: z.string().catch(""),
+});
+
 export const tutorResponse = z.object({
+  plan: answerPlan.catch({ on_screen: "", about_screen: false, question_type: "conceptual", visual: "none", why: "" }),
   misconception: z.string().catch(""),
   blocks: z.array(block).min(1),
   rewatch_from: z.number().nullable().catch(null),
 });
-export type TutorResponse = z.infer<typeof tutorResponse>;
+/** `frame_path` is set by the server (never the model) when the student's paused frame was captured. */
+export type TutorResponse = z.infer<typeof tutorResponse> & { frame_path?: string };
 
-export type UserContent = { text: string };
+export type UserContent = { text: string; frame_path?: string };
 export type StoredMessage = {
   id: string;
   role: "user" | "assistant";
   video_timestamp: number | null;
   content: UserContent | TutorResponse;
   created_at: string;
+  /** Short-lived signed URL for content.frame_path, added when messages are loaded. */
+  frame_url?: string | null;
 };
 
 /** Gemini's structured video index. */

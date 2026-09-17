@@ -5,7 +5,7 @@
   --foreground: #1c1b19;
   --muted: #6b6860;
   --line: #e6e2d8;
-  --accent: #4f46e5;
+  --accent: #c2410c;
 }
 
 @theme inline {
@@ -16,6 +16,11 @@
   --color-accent: var(--accent);
   --font-sans: var(--font-inter);
   --font-hand: var(--font-caveat);
+  --font-serif: var(--font-instrument);
+  --color-paper: #f6f2e9;
+  --color-ink: #1c1b19;
+  --color-pen: #d9480f;
+  --color-marker: #ffe066;
 }
 
 body {
@@ -51,3 +56,38 @@ body {
 .prose-tutor code { background: #efece4; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.9em; }
 .prose-tutor strong { font-weight: 600; }
 .prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.25rem 0; }
+
+/* Landing page ------------------------------------------------------------ */
+.graph-paper {
+  background-color: var(--color-paper);
+  background-image:
+    linear-gradient(rgba(28, 27, 25, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(28, 27, 25, 0.045) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+.marker {
+  background: linear-gradient(transparent 58%, var(--color-marker) 58%, var(--color-marker) 92%, transparent 92%);
+  padding: 0 0.08em;
+}
+.demo-camera {
+  transform-origin: 0 0;
+  transition: transform 1100ms cubic-bezier(0.65, 0, 0.35, 1);
+}
+.caret::after {
+  content: "";
+  display: inline-block;
+  width: 0.08em;
+  height: 1em;
+  margin-left: 0.04em;
+  vertical-align: -0.12em;
+  background: currentColor;
+  animation: caret-blink 1s steps(1) infinite;
+}
+@keyframes caret-blink {
+  50% { opacity: 0; }
+}
+details.faq summary::-webkit-details-marker { display: none; }
+details.faq[open] .faq-plus { transform: rotate(45deg); }
+@media (prefers-reduced-motion: reduce) {
+  .demo-camera { transition: none; }
+}

@@ -11,7 +11,7 @@ Paste a YouTube lesson. When you're confused, start typing — the video pauses 
 ## Setup
 
 1. Create a [Supabase](https://supabase.com) project, then run `supabase/migrations/0001_init.sql` in the SQL editor.
-2. In Supabase → Authentication: enable **Google** and **Email**, and add `http://localhost:3000/auth/callback` to the redirect URLs.
+2. In Supabase → Authentication: enable **Email** (and optionally **Google**, then set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`), and add `http://localhost:3000/auth/callback` to the redirect URLs.
 3. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 4. Copy `.env.example` to `.env.local` and fill it in.
 5. Run:

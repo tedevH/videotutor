@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
+const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
+
 export function LoginForm({ next }: { next: string }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
@@ -22,15 +24,19 @@ export function LoginForm({ next }: { next: string }) {
 
   return (
     <div className="mt-6 space-y-4">
-      <button
-        onClick={google}
-        className="w-full rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-medium hover:bg-stone-50"
-      >
-        Continue with Google
-      </button>
-      <div className="flex items-center gap-3 text-xs text-muted">
-        <div className="h-px flex-1 bg-line" /> or <div className="h-px flex-1 bg-line" />
-      </div>
+      {GOOGLE_ENABLED && (
+        <>
+          <button
+            onClick={google}
+            className="w-full rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-medium hover:bg-stone-50"
+          >
+            Continue with Google
+          </button>
+          <div className="flex items-center gap-3 text-xs text-muted">
+            <div className="h-px flex-1 bg-line" /> or <div className="h-px flex-1 bg-line" />
+          </div>
+        </>
+      )}
       {status === "sent" ? (
         <p className="text-sm">Check your email for a sign-in link.</p>
       ) : (

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { signFrameUrls } from "@/lib/frames";
 import { createClient } from "@/lib/supabase/server";
 import type { StoredMessage } from "@/lib/tutor/schema";
 import { WatchView } from "./watch-view";
@@ -30,7 +31,7 @@ export default async function WatchPage({ params }: PageProps<"/watch/[sessionId
       channel={video.channel}
       initialStatus={video.index_status}
       startAt={session.last_position}
-      initialMessages={(messages ?? []) as StoredMessage[]}
+      initialMessages={(await signFrameUrls((messages ?? []) as StoredMessage[])) as StoredMessage[]}
     />
   );
 }

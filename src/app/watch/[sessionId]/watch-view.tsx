@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TutorBlocks } from "@/components/blocks/tutor-blocks";
 import { YouTubePlayer, type PlayerHandle } from "@/components/youtube-player";
+import { useTabCapture } from "@/lib/use-tab-capture";
 import type { StoredMessage, TutorResponse, UserContent } from "@/lib/tutor/schema";
 import { formatTime } from "@/lib/youtube";
 
@@ -20,6 +21,10 @@ export function WatchView(props: {
   initialMessages: StoredMessage[];
 }) {
   const player = useRef<PlayerHandle>(null);
+  const playerBox = useRef<HTMLDivElement>(null);
+  const capture = useTabCapture();
+  /** Exact frame grabbed at the moment of pausing; reused for follow-ups until playback resumes. */
+  const pausedFrame = useRef<string | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -72,6 +77,8 @@ export function WatchView(props: {
   /** The core interaction: the moment the student starts typing, freeze the video and remember where. */
   function freezeVideo() {
     if (pausedAt !== null || !player.current) return;
+    // Grab the frame before pausing so YouTube's pause overlay isn't in the picture.
+    pausedFrame.current = capture.grab(playerBox.current);
     const t = player.current.currentTime();
     player.current.pause();
     setPausedAt(t);
@@ -80,23 +87,24 @@ export function WatchView(props: {
   function resume(from?: number) {
     if (from !== undefined) player.current?.seek(from);
     player.current?.play();
+    pausedFrame.current = null;
     setPausedAt(null);
   }
 
   function onPlayerStateChange(playing: boolean) {
     if (!duration) setDuration(player.current?.duration() ?? 0);
     // Student pressed play themselves: the next question is about a new moment.
-    if (playing && !sending) setPausedAt(null);
+    if (playing && !sending) {
+      pausedFrame.current = null;
+      setPausedAt(null);
+    }
   }
 
   async function send() {
     const text = draft.trim();
     if (!text || sending) return;
+    if (pausedAt === null) freezeVideo();
     const timestamp = pausedAt ?? player.current?.currentTime() ?? 0;
-    if (pausedAt === null) {
-      player.current?.pause();
-      setPausedAt(timestamp);
-    }
 
     const optimistic: StoredMessage = {
       id: `pending-${Date.now()}`,
@@ -114,7 +122,7 @@ export function WatchView(props: {
       const res = await fetch(`/api/sessions/${props.sessionId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, timestamp }),
+        body: JSON.stringify({ text, timestamp, frame: pausedFrame.current }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? "The tutor couldn't answer");
@@ -157,6 +165,16 @@ export function WatchView(props: {
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  async function retryIndexing() {
+    setStatus("processing");
+    const res = await fetch("/api/videos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url: props.videoId }),
+    });
+    if (!res.ok) setStatus("failed");
+  }
+
   const questionTimes = messages.filter((m) => m.role === "user" && m.video_timestamp !== null);
 
   return (
@@ -167,9 +185,14 @@ export function WatchView(props: {
           <Link href="/library" className="font-hand text-2xl">
             ← VideoTutor
           </Link>
-          <IndexStatus status={status} />
+          <div className="flex items-center gap-2">
+            <IndexStatus status={status} onRetry={retryIndexing} />
+            <CaptureToggle status={capture.status} onStart={capture.start} onStop={capture.stop} />
+          </div>
         </div>
-        <YouTubePlayer ref={player} videoId={props.videoId} start={props.startAt} onStateChange={onPlayerStateChange} />
+        <div ref={playerBox}>
+          <YouTubePlayer ref={player} videoId={props.videoId} start={props.startAt} onStateChange={onPlayerStateChange} />
+        </div>
         {duration > 0 && questionTimes.length > 0 && (
           <div className="relative h-4" aria-label="Moments you asked about">
             <div className="absolute inset-x-0 top-1/2 h-px bg-line" />
@@ -245,17 +268,53 @@ export function WatchView(props: {
   );
 }
 
-function IndexStatus({ status }: { status: string }) {
+function IndexStatus({ status, onRetry }: { status: string; onRetry: () => void }) {
   if (status === "ready") return null;
-  const text =
-    status === "failed"
-      ? "Couldn't analyze visuals — answers use captions only"
-      : "Watching the video… answers improve in a minute";
+  if (status === "failed") {
+    return (
+      <span className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-800">
+        Video notes failed
+        <button onClick={onRetry} className="font-semibold underline">
+          Retry
+        </button>
+      </span>
+    );
+  }
   return (
     <span className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-800">
-      {status !== "failed" && <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />}
-      {text}
+      <span className="h-2 w-2 animate-pulse rounded-full bg-amber-500" />
+      Taking notes on the video…
     </span>
+  );
+}
+
+function CaptureToggle({
+  status,
+  onStart,
+  onStop,
+}: {
+  status: "off" | "on" | "unsupported";
+  onStart: () => Promise<boolean>;
+  onStop: () => void;
+}) {
+  const [declined, setDeclined] = useState(false);
+  if (status === "unsupported") return null;
+  if (status === "on") {
+    return (
+      <button onClick={onStop} className="flex items-center gap-1.5 rounded-full bg-green-50 px-3 py-1 text-xs text-green-800">
+        <span className="h-2 w-2 rounded-full bg-green-500" />
+        Exact diagrams on
+      </button>
+    );
+  }
+  return (
+    <button
+      onClick={async () => setDeclined(!(await onStart()))}
+      title="Lets the tutor see the exact frame you paused on and draw on it. In the prompt, choose this tab."
+      className="rounded-full border border-line bg-white px-3 py-1 text-xs font-medium hover:bg-stone-50"
+    >
+      {declined ? "Choose “This tab” to enable" : "📷 Enable exact diagrams"}
+    </button>
   );
 }
 
@@ -295,7 +354,7 @@ function TutorMessage({ message, onRewatch }: { message: StoredMessage; onRewatc
           {content.misconception}
         </p>
       )}
-      <TutorBlocks blocks={content.blocks} />
+      <TutorBlocks blocks={content.blocks} frameUrl={message.frame_url} />
       <div className="flex items-center gap-2 text-xs text-muted">
         {content.rewatch_from !== null && (
           <button onClick={() => onRewatch(content.rewatch_from!)} className="rounded-full border border-line px-3 py-1 hover:bg-stone-50">

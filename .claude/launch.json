@@ -2,11 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "dev-preview",
-      "runtimeExecutable": "npx",
-      "runtimeArgs": ["next", "dev", "-p", "3123"],
-      "port": 3123,
-      "env": { "NEXT_PUBLIC_SUPABASE_URL": "http://127.0.0.1:1", "NEXT_PUBLIC_SUPABASE_ANON_KEY": "dummy" }
+      "name": "dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "port": 3000
     }
   ]
 }

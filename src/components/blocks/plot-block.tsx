@@ -3,18 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 
 const COLORS = ["#2563eb", "#dc2626", "#16a34a", "#ea580c"];
+const SHADE_COLORS = ["#16a34a", "#facc15", "#7c3aed"];
 
-export function PlotBlock({
-  title,
-  functions,
-  xDomain,
-  yDomain,
-}: {
+type Props = {
   title: string;
   functions: { fn: string; label?: string }[];
   xDomain: [number, number];
   yDomain?: [number, number];
-}) {
+  shade: { fn: string; from: number; to: number }[];
+  points: { x: number; y: number; label?: string }[];
+  vlines: { x: number; label?: string }[];
+};
+
+export function PlotBlock({ title, functions, xDomain, yDomain, shade, points, vlines }: Props) {
   const target = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
 
@@ -35,7 +36,24 @@ export function PlotBlock({
           disableZoom: true, // otherwise scrolling the chat zooms the graph
           xAxis: { domain: xDomain },
           yAxis: yDomain ? { domain: yDomain } : undefined,
-          data: functions.map((f, i) => ({ fn: f.fn, color: COLORS[i % COLORS.length], title: f.label })),
+          annotations: vlines.map((v) => ({ x: v.x, text: v.label })),
+          data: [
+            // Shaded regions first so curves draw on top of them.
+            ...shade.map((s, i) => ({
+              fn: s.fn,
+              range: [s.from, s.to] as [number, number],
+              closed: true,
+              color: SHADE_COLORS[i % SHADE_COLORS.length],
+              skipTip: true,
+            })),
+            ...functions.map((f, i) => ({ fn: f.fn, color: COLORS[i % COLORS.length], title: f.label })),
+            ...points.flatMap((p) => [
+              { points: [[p.x, p.y]], fnType: "points", graphType: "scatter" as const, color: "#dc2626" },
+              ...(p.label
+                ? [{ graphType: "text" as const, location: [p.x, p.y] as [number, number], text: ` ${p.label}`, color: "#dc2626" }]
+                : []),
+            ]),
+          ],
         });
       } catch {
         setFailed(true);
@@ -44,7 +62,7 @@ export function PlotBlock({
     return () => {
       cancelled = true;
     };
-  }, [functions, xDomain, yDomain]);
+  }, [functions, xDomain, yDomain, shade, points, vlines]);
 
   return (
     <figure className="overflow-hidden rounded-xl border border-line bg-white">

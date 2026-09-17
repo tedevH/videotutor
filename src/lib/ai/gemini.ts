@@ -1,8 +1,9 @@
-import { GoogleGenAI, MediaResolution, Type } from "@google/genai";
+import { GoogleGenAI, MediaResolution, ThinkingLevel, Type } from "@google/genai";
+import { withRetry } from "@/lib/ai/retry";
 import { videoIndex, type VideoIndex } from "@/lib/tutor/schema";
 import type { TranscriptLine } from "@/lib/youtube";
 
-const model = () => process.env.GEMINI_MODEL || "gemini-2.5-flash-lite";
+const model = () => process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 // Long videos are indexed in segments so each request stays small and reliable.
 const SEGMENT_SECONDS = 20 * 60;
@@ -32,7 +33,7 @@ const responseSchema = {
 
 function prompt(hasTranscript: boolean, from: number, to: number) {
   return `You are indexing an educational video so a tutor can later answer student questions about any moment.
-Cover ONLY the range ${from}s to ${to}s. Split it into consecutive chunks of about 30-45 seconds, aligned to natural topic breaks.
+Cover ONLY the range ${from}s to ${to}s. Split it into consecutive chunks of about 30-45 seconds (roughly ${Math.max(1, Math.round((to - from) / 40))} chunks), aligned to natural topic breaks. Do not merge long stretches into one chunk.
 
 For each chunk:
 - transcript: ${hasTranscript ? "a brief paraphrase of what is said (the exact captions are stored separately)" : "what is said, as close to verbatim as practical"}
@@ -55,7 +56,7 @@ export async function indexVideo(
 
   const results = await Promise.all(
     segments.map(async ([from, to]) => {
-      const res = await ai.models.generateContent({
+      const res = await withRetry(() => ai.models.generateContent({
         model: model(),
         contents: [
           {
@@ -76,8 +77,10 @@ export async function indexVideo(
           responseMimeType: "application/json",
           responseSchema,
           temperature: 0.2,
+          // Describing what's on screen needs little reasoning; thinking tokens are billed as output.
+          thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
         },
-      });
+      }));
       return {
         parsed: videoIndex.parse(JSON.parse(res.text ?? "{}")),
         inputTokens: res.usageMetadata?.promptTokenCount ?? 0,

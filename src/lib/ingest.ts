@@ -46,7 +46,7 @@ export async function ingestVideo(videoId: string) {
     await db.from("videos").update({ index_status: "ready", summary: index.summary }).eq("id", videoId);
     await db.from("usage_events").insert({
       kind: "ingest",
-      model: process.env.GEMINI_MODEL || "gemini-2.5-flash-lite",
+      model: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
       input_tokens: inputTokens,
       output_tokens: outputTokens,
     });
