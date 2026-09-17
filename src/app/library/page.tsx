@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AddVideoForm } from "@/components/add-video-form";
 import { ManageBillingButton } from "@/components/billing-buttons";
 import { AppNav } from "@/components/app-nav";
+import { syncSubscriptionFromStripe } from "@/lib/billing";
 import { createClient } from "@/lib/supabase/server";
 import { formatTime } from "@/lib/youtube";
 
@@ -11,7 +12,12 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from("profiles").select("plan, stripe_customer_id").eq("id", user!.id).maybeSingle();
+  let { data: profile } = await supabase.from("profiles").select("plan, stripe_customer_id").eq("id", user!.id).maybeSingle();
+  // Back from checkout: confirm with Stripe directly instead of waiting for the webhook.
+  if (upgraded && profile?.stripe_customer_id && profile.plan !== "pro") {
+    await syncSubscriptionFromStripe(user!.id, profile.stripe_customer_id).catch((err) => console.error("subscription sync failed", err));
+    ({ data: profile } = await supabase.from("profiles").select("plan, stripe_customer_id").eq("id", user!.id).maybeSingle());
+  }
   const isPro = profile?.plan === "pro";
   const { data: sessions } = await supabase
     .from("sessions")

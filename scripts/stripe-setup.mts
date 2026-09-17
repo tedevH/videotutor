@@ -10,7 +10,7 @@ import { PLANS } from "../src/lib/plans";
 const key = process.env.STRIPE_SECRET_KEY;
 if (!key) throw new Error("Add STRIPE_SECRET_KEY to .env.local first");
 const stripe = new Stripe(key);
-console.log(`Stripe mode: ${key.startsWith("sk_live") ? "LIVE" : "test"}`);
+console.log(`Stripe mode: ${key.includes("_live_") ? "LIVE" : "test"}`);
 
 const existing = await stripe.prices.list({ lookup_keys: [PLANS.pro.monthly.lookupKey, PLANS.pro.yearly.lookupKey], active: true, expand: ["data.product"] });
 let productId = existing.data[0] ? (existing.data[0].product as Stripe.Product).id : null;
