@@ -14,6 +14,8 @@ export type TutorInput = {
   timestamp: number;
   question: string;
   frameJpeg: string | null;
+  /** PNG of what the student drew on the whiteboard, if they sent one. */
+  drawingPng?: string | null;
   video: { title: string | null; channel: string | null; summary: string | null; index_status: string };
   chunks: ChunkRow[];
   studentLevel: string;
@@ -46,7 +48,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
   const reuse = input.followUp ?? null;
   const look = reuse
     ? null
-    : await lookAtMoment(input.media, input.timestamp, input.frameJpeg, input.question, input.live).catch((err) => {
+    : await lookAtMoment(input.media, input.timestamp, input.frameJpeg, input.question, input.live, input.drawingPng ?? null).catch((err) => {
         console.error("look pass failed", err);
         return null;
       });
@@ -98,6 +100,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
   let answer = await askTutor(SYSTEM_PROMPT, {
     context: contextFor(verifiedWork),
     frameJpeg: input.frameJpeg,
+    drawingPng: input.drawingPng ?? null,
     timestamp: input.timestamp,
     // Without checked work, a hard question at least gets careful reasoning.
     thinking,
@@ -121,6 +124,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
         const revised = await askTutor(SYSTEM_PROMPT, {
           context: `${contextFor(verifiedWork)}\n\n<reviewer_corrections>\nA reviewer found these problems in your previous answer. Fix every one; keep what was right.\n${fixes}\n</reviewer_corrections>`,
           frameJpeg: input.frameJpeg,
+          drawingPng: input.drawingPng ?? null,
           timestamp: input.timestamp,
           thinking: ThinkingLevel.MEDIUM,
         }).catch((err) => {

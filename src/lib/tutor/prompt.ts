@@ -69,6 +69,7 @@ Choose exactly one visual option in plan.visual, and include at most ONE visual 
 - "transform2d": what a 2x2 matrix does to the plane (linear maps, eigenvectors, shears, rotations, projections, determinants as area). You give the matrix; the app draws the grid warping and computes the eigen-directions exactly.
 - "plot3d": a function of two variables z = f(x, y) (partial derivatives, gradients, tangent planes, critical points, level curves). Use view "contour" for level sets and gradients, "surface" for shape.
 - "vector_field": a 2D vector field F = (fx, fy) (flow, divergence, curl, line integrals), optionally with a parametric curve.
+- "board": the whiteboard — for working an example or derivation where equations, a sketch and a small graph belong together and appear step by step, the way a teacher uses a board. Use it for worked examples ("example" move), multi-step solutions that mix math and pictures, and when the student sent a drawing.
 - "diagram": a physical/spatial setup (forces, vectors, structures, before/after) that is NOT on screen and cannot be a plot. Keep it simple and correct; never approximate a curve with boxes.
 
 Hard rule: if about_screen is true and <screen_now> shows a graph, curve, diagram, or animation, visual must NOT be "none": "frame" when the paused frame is available, otherwise "plot" (for math curves) or "diagram"/"flow" that reproduces what the video showed as faithfully as possible.
@@ -130,6 +131,15 @@ Blocks (usually 1-3 total, text first):
       {"kind":"text","x","y","text","size":"sm"|"md"|"lg"} {"kind":"highlight","cx","cy","r"}
     Labels <= 18 chars, 6+ units apart, never overlapping shapes. Spread elements across 2-5 steps (never all in step 1), each step narrated.
 - {"type":"check_question","question":"...","answer":"..."}: optional, only for conceptual questions.
+- {"type":"board","title":"...","ops":[...],"steps":[{"step":1,"narration":"..."}]}
+    A 100 wide x 60 tall whiteboard (x right, y down). Plan the layout like a real board: equations in a column on the left, sketch or graph on the right; keep 4+ units from edges and don't overlap items.
+    ops (each has "step"; give ids to things you'll highlight or erase):
+      {"op":"write","id":"eq1","x":6,"y":8,"text":"$2x + 6 = 14$","size":"md","color":"ink"}   x,y = top-left; text may mix words and $LaTeX$; one line per write (≈ 3 units tall for md)
+      {"op":"draw","shape":"arrow"|"line"|"rect"|"ellipse"|"polyline","points":[[x1,y1],[x2,y2],...],"color":"blue","dashed":false,"label":""}   rect/ellipse use two corner points
+      {"op":"graph","id":"g1","x":55,"y":8,"w":38,"h":30,"fn":"x^2","xDomain":[-3,3],"yDomain":null,"color":"blue","shade":[0,2]}   a small plot drawn from the function; shade is an x-interval or null
+      {"op":"highlight","target":"eq1","color":"orange"}   circles an item by id (or give x,y,w,h instead of target)
+      {"op":"erase","ids":["eq1"]}   remove items, e.g. to correct a wrong step the student made
+    Reveal over 2-6 steps with one narration sentence each.
 - {"type":"steps","title":"...","steps":[{"math":"A - 3I = \\begin{bmatrix}0&1\\\\0&0\\end{bmatrix}","note":"subtract λ = 3 on the diagonal"}]}
     math is LaTeX without $ delimiters. note is a short plain-language reason (can contain $...$ math).
 - {"type":"transform2d","title":"...","matrix":[[3,1],[0,3]],"vectors":[{"x":1,"y":0,"label":"x₁"}],"show_eigenvectors":true}

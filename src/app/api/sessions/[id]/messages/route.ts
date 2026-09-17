@@ -31,11 +31,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     frame?: string | null;
     captions?: string;
     recentFrames?: string[];
+    drawing?: string | null;
   };
   const text = body.text?.trim();
   const timestamp = Math.max(0, body.timestamp ?? 0);
   const frame = typeof body.frame === "string" && body.frame.length < MAX_FRAME_BASE64 ? body.frame : null;
-  if (!text) return NextResponse.json({ error: "Ask a question" }, { status: 400 });
+  const drawing = typeof body.drawing === "string" && body.drawing.length < MAX_FRAME_BASE64 ? body.drawing : null;
+  if (!text && !drawing) return NextResponse.json({ error: "Ask a question" }, { status: 400 });
+  const question = text || "Here's what I drew. Is this right?";
 
   // RLS guarantees this only returns the user's own session.
   const { data: session } = await supabase
@@ -45,6 +48,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .maybeSingle();
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
+  const videoRow = session.videos as unknown as VideoRow | null;
   const db = createAdminClient();
   const [{ data: profile }, { count: usedToday }] = await Promise.all([
     supabase.from("profiles").select("school_level, plan").eq("id", user.id).single(),
@@ -70,8 +74,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   // Read history before inserting the new question so it isn't counted as "earlier".
-  const [framePath, previousTutorReply, { data: history }, { data: chunks }] = await Promise.all([
+  const [framePath, drawingPath, previousTutorReply, { data: history }, { data: chunks }] = await Promise.all([
     frame ? uploadFrame(user.id, sessionId, frame) : null,
+    drawing ? uploadFrame(user.id, sessionId, drawing, "image/png") : null,
     lastTutorReply(sessionId),
     supabase
       .from("messages")
@@ -82,7 +87,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     supabase
       .from("video_chunks")
       .select("start_seconds, end_seconds, transcript, visual, on_screen_text, concepts")
-      .eq("video_id", session.video_id)
+      .eq("video_id", session.video_id ?? "")
       .order("start_seconds"),
   ]);
 
@@ -91,18 +96,20 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .insert({
       session_id: sessionId,
       role: "user",
-      video_timestamp: Math.floor(timestamp),
-      content: framePath ? { text, frame_path: framePath } : { text },
+      video_timestamp: videoRow ? Math.floor(timestamp) : null,
+      content: { text: question, ...(framePath && { frame_path: framePath }), ...(drawingPath && { drawing_path: drawingPath }) },
     })
     .select()
     .single();
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
 
-  const videoRow = session.videos as unknown as VideoRow;
-  const media = await mediaForVideo(videoRow).catch((err) => {
-    console.error("video media unavailable", err);
-    return null;
-  });
+  // Whiteboard sessions have no video.
+  const media = videoRow
+    ? await mediaForVideo(videoRow).catch((err) => {
+        console.error("video media unavailable", err);
+        return null;
+      })
+    : null;
   // Browser-side context, used when Gemini can't watch the video itself.
   const live = {
     captions: typeof body.captions === "string" ? body.captions.slice(-MAX_CAPTION_CHARS) : "",
@@ -113,11 +120,17 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const { response, model, usage } = await runTutor({
     media,
-    live: media ? null : live,
+    live: media || !videoRow ? null : live,
     timestamp,
-    question: text,
+    question,
     frameJpeg: frame,
-    video: session.videos as unknown as { title: string | null; channel: string | null; summary: string | null; index_status: string },
+    drawingPng: drawing,
+    video: (session.videos as unknown as { title: string | null; channel: string | null; summary: string | null; index_status: string } | null) ?? {
+      title: "Whiteboard session",
+      channel: null,
+      summary: null,
+      index_status: "ready",
+    },
     chunks: (chunks ?? []) as ChunkRow[],
     studentLevel: profile?.school_level ?? "college",
     conversation: summarizeHistory((history ?? []).reverse()),
@@ -132,7 +145,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   // Update the student model after responding; it doesn't need to slow the answer down.
   after(() =>
-    learnFromTurn({ userId: user.id, sessionId, source: "video", response, previousTutorReply, courseId: session.course_id }),
+    learnFromTurn({ userId: user.id, sessionId, source: videoRow ? "video" : "board", response, previousTutorReply, courseId: session.course_id }),
   );
 
   const [{ data: assistantMsg }] = await Promise.all([
@@ -141,7 +154,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .insert({
         session_id: sessionId,
         role: "assistant",
-        video_timestamp: Math.floor(timestamp),
+        video_timestamp: videoRow ? Math.floor(timestamp) : null,
         content: framePath ? { ...response, frame_path: framePath } : response,
       })
       .select()

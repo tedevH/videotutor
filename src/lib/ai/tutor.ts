@@ -42,11 +42,15 @@ export async function lookAtMoment(
   frameJpeg: string | null,
   question: string,
   live: LiveContext | null,
+  drawingPng: string | null = null,
 ) {
   const t = Math.floor(timestamp);
   const parts: Part[] = [];
+  const standalone = !media && !live;
   if (media) {
     parts.push(clipPart(media, t));
+  } else if (standalone) {
+    parts.push({ text: "There is no video: the student is working with Lumo directly on a whiteboard." });
   } else {
     // No direct access to the video: use what played in the student's browser.
     for (const [i, jpeg] of (live?.recentFrames ?? []).entries()) {
@@ -55,8 +59,10 @@ export async function lookAtMoment(
     parts.push({ text: `Captions from the last few minutes of playback:\n${live?.captions || "(no captions available)"}` });
   }
   if (frameJpeg) parts.push({ text: "Exact frame at the pause:" }, framePart(frameJpeg));
+  if (drawingPng) parts.push({ text: "The student's drawing on the whiteboard:" }, { inlineData: { mimeType: "image/png", data: drawingPng } });
   parts.push({
-    text: `${media ? "This clip ends" : "The frames and captions above end"} at the moment a student paused the video and asked: "${question}"
+    text: `${standalone ? "The student" : media ? "This clip ends at the moment a student paused the video and" : "The frames and captions above end at the moment a student paused the video and"} asked: "${question}"
+${drawingPng ? "In on_screen, describe the student's drawing precisely (what they drew, any mistakes or gaps in it).\n" : ""}
 
 Report as JSON:
 - on_screen: precisely everything visible in the final second${frameJpeg ? " (the exact frame is attached)" : ""}: every graph (axes, tick values, curves and their equations, shaded regions and colors, marked points), diagram (parts, arrows, labels, how they connect), equations and matrices exactly as written (LaTeX), code, board work, and where each thing is. "speaker only" if nothing instructional is visible.
@@ -121,11 +127,14 @@ export async function solveWithCode(system: string, context: string) {
 /** Pass 3: answer the question, grounded in the earlier passes and (when captured) the exact frame. */
 export async function askTutor(
   system: string,
-  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel },
+  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel; drawingPng?: string | null },
 ): Promise<{ response: TutorResponse; model: string; usage: Usage }> {
   const model = tutorModel();
   const parts: Part[] = [{ text: input.context }];
   if (input.frameJpeg) parts.push({ text: "<paused_frame>" }, framePart(input.frameJpeg), { text: "</paused_frame>" });
+  if (input.drawingPng) {
+    parts.push({ text: "<student_drawing>" }, { inlineData: { mimeType: "image/png", data: input.drawingPng } }, { text: "</student_drawing>" });
+  }
 
   let usage: Usage = { inputTokens: 0, outputTokens: 0 };
   let contents = [{ role: "user", parts }];
@@ -240,7 +249,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
   return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens };
 }
 
-const VISUAL_TYPES = new Set(["frame", "plot", "diagram", "flow", "transform2d", "plot3d", "vector_field"]);
+const VISUAL_TYPES = new Set(["frame", "plot", "diagram", "flow", "transform2d", "plot3d", "vector_field", "board"]);
 
 /** Applies the visual rules the prompt asks for, in case the model ignores them. */
 function enforceRules(response: TutorResponse, hasFrame: boolean, pausedAt: number): TutorResponse {

@@ -1,3 +1,4 @@
+import { Whiteboard } from "@/components/board/whiteboard";
 import type { Block } from "@/lib/tutor/schema";
 import { CheckQuestion } from "./check-question";
 import { FlowBlock } from "./flow-block";
@@ -10,7 +11,15 @@ import { StepsBlock } from "./steps-block";
 import { Transform2D } from "./transform-2d";
 import { VectorField } from "./vector-field";
 
-export function TutorBlocks({ blocks, frameUrl }: { blocks: Block[]; frameUrl?: string | null }) {
+export function TutorBlocks({
+  blocks,
+  frameUrl,
+  onAskAboutDrawing,
+}: {
+  blocks: Block[];
+  frameUrl?: string | null;
+  onAskAboutDrawing?: (png: string) => void;
+}) {
   return (
     <div className="space-y-3">
       {blocks.map((b, i) => {
@@ -27,6 +36,8 @@ export function TutorBlocks({ blocks, frameUrl }: { blocks: Block[]; frameUrl?: 
             return <PlotBlock key={i} {...b} />;
           case "check_question":
             return <CheckQuestion key={i} question={b.question} answer={b.answer} />;
+          case "board":
+            return <Whiteboard key={i} title={b.title} ops={b.ops} steps={b.steps} allowDrawing={!!onAskAboutDrawing} onAskAboutDrawing={onAskAboutDrawing} />;
           case "steps":
             return <StepsBlock key={i} title={b.title} steps={b.steps} />;
           case "transform2d":

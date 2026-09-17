@@ -48,6 +48,61 @@ export type DiagramElement = z.infer<typeof diagramElement>;
 
 const steps = z.array(z.object({ step: z.number().int(), narration: z.string() })).catch([]);
 
+/**
+ * Whiteboard operations on a 100 x 60 board. Lumo writes, draws, graphs, highlights and erases,
+ * revealed step by step like a teacher at a board.
+ */
+const boardColor = z.enum(["ink", "red", "blue", "green", "orange", "purple"]).catch("ink");
+export const boardOp = z.discriminatedUnion("op", [
+  z.object({
+    op: z.literal("write"),
+    id: z.string().catch(""),
+    step: z.number().int().min(1).catch(1),
+    x: z.number(),
+    y: z.number(),
+    text: z.string(),
+    size: z.enum(["sm", "md", "lg"]).catch("md"),
+    color: boardColor,
+  }),
+  z.object({
+    op: z.literal("draw"),
+    id: z.string().catch(""),
+    step: z.number().int().min(1).catch(1),
+    shape: z.enum(["line", "arrow", "rect", "ellipse", "polyline"]),
+    points: z.array(z.tuple([z.number(), z.number()])).min(2),
+    color: boardColor,
+    dashed: z.boolean().catch(false),
+    label: z.string().catch(""),
+  }),
+  z.object({
+    op: z.literal("graph"),
+    id: z.string().catch(""),
+    step: z.number().int().min(1).catch(1),
+    x: z.number(),
+    y: z.number(),
+    w: z.number(),
+    h: z.number(),
+    fn: z.string(),
+    xDomain: z.tuple([z.number(), z.number()]).catch([-5, 5]),
+    yDomain: z.tuple([z.number(), z.number()]).nullable().catch(null),
+    color: boardColor,
+    shade: z.tuple([z.number(), z.number()]).nullable().catch(null),
+  }),
+  z.object({
+    op: z.literal("highlight"),
+    id: z.string().catch(""),
+    step: z.number().int().min(1).catch(1),
+    target: z.string().catch(""),
+    x: z.number().catch(0),
+    y: z.number().catch(0),
+    w: z.number().catch(0),
+    h: z.number().catch(0),
+    color: boardColor,
+  }),
+  z.object({ op: z.literal("erase"), id: z.string().catch(""), step: z.number().int().min(1).catch(1), ids: z.array(z.string()) }),
+]);
+export type BoardOp = z.infer<typeof boardOp>;
+
 export const block = z.discriminatedUnion("type", [
   z.object({ type: z.literal("text"), md: z.string() }),
   z.object({
@@ -69,6 +124,7 @@ export const block = z.discriminatedUnion("type", [
     vlines: z.array(z.object({ x: z.number(), label: z.string().optional() })).catch([]),
   }),
   z.object({ type: z.literal("check_question"), question: z.string(), answer: z.string() }),
+  z.object({ type: z.literal("board"), title: z.string().catch(""), ops: z.array(boardOp).min(1), steps }),
   z.object({
     type: z.literal("steps"),
     title: z.string().catch(""),
@@ -108,7 +164,7 @@ export const answerPlan = z.object({
   on_screen: z.string().catch(""),
   about_screen: z.boolean().catch(false),
   question_type: z.enum(["conceptual", "procedural", "factual", "visual", "follow_up", "off_topic"]).catch("conceptual"),
-  visual: z.enum(["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field"]).catch("none"),
+  visual: z.enum(["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field", "board"]).catch("none"),
   why: z.string().catch(""),
 });
 
@@ -145,7 +201,7 @@ export type TutorResponse = z.infer<typeof tutorResponse> & {
   context_cache?: { screen_now: string; verified_work: string | null; subject: string; level: string; timestamp: number };
 };
 
-export type UserContent = { text: string; frame_path?: string };
+export type UserContent = { text: string; frame_path?: string; drawing_path?: string };
 export type StoredMessage = {
   id: string;
   role: "user" | "assistant";
@@ -154,6 +210,7 @@ export type StoredMessage = {
   created_at: string;
   /** Short-lived signed URL for content.frame_path, added when messages are loaded. */
   frame_url?: string | null;
+  drawing_url?: string | null;
 };
 
 /** Gemini's structured video index. */

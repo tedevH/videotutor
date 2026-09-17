@@ -66,6 +66,39 @@ const block = {
     ),
     obj({ type: { type: "string", enum: ["check_question"] }, question: str, answer: str }, ["type", "question", "answer"]),
     obj(
+      {
+        type: { type: "string", enum: ["board"] },
+        title: str,
+        ops: {
+          type: "array",
+          items: obj(
+            {
+              op: { type: "string", enum: ["write", "draw", "graph", "highlight", "erase"] },
+              id: str,
+              step: { type: "integer" },
+              x: num, y: num, w: num, h: num,
+              text: str,
+              size: { type: "string", enum: ["sm", "md", "lg"] },
+              color: { type: "string", enum: ["ink", "red", "blue", "green", "orange", "purple"] },
+              shape: { type: "string", enum: ["line", "arrow", "rect", "ellipse", "polyline"] },
+              points: { type: "array", items: pair },
+              dashed: { type: "boolean" },
+              label: str,
+              fn: str,
+              xDomain: pair,
+              yDomain: { anyOf: [pair, { type: "null" }] },
+              shade: { anyOf: [pair, { type: "null" }] },
+              target: str,
+              ids: { type: "array", items: str },
+            },
+            ["op", "step"],
+          ),
+        },
+        steps,
+      },
+      ["type", "title", "ops", "steps"],
+    ),
+    obj(
       { type: { type: "string", enum: ["steps"] }, title: str, steps: { type: "array", items: obj({ math: str, note: str }, ["math", "note"]) } },
       ["type", "title", "steps"],
     ),
@@ -126,7 +159,7 @@ export const tutorJsonSchema = obj(
       {
         about_screen: { type: "boolean" },
         question_type: { type: "string", enum: ["conceptual", "procedural", "factual", "visual", "follow_up", "off_topic"] },
-        visual: { type: "string", enum: ["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field"] },
+        visual: { type: "string", enum: ["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field", "board"] },
         why: str,
       },
       ["about_screen", "question_type", "visual", "why"],
