@@ -2,7 +2,7 @@ import Link from "next/link";
 import { PricingCards } from "@/components/pricing-cards";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Pricing · VideoTutor" };
+export const metadata = { title: "Pricing · LumoTutor" };
 
 export default async function PricingPage() {
   const supabase = await createClient();
@@ -15,7 +15,7 @@ export default async function PricingPage() {
     <main className="graph-paper flex flex-1 flex-col text-ink">
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Link href={user ? "/library" : "/"} className="text-xl font-semibold tracking-tight">
-          VideoTutor
+          LumoTutor
         </Link>
         {!user && (
           <Link href="/login?next=/pricing" className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/85">

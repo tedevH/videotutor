@@ -18,6 +18,11 @@ export type TutorInput = {
   chunks: ChunkRow[];
   studentLevel: string;
   conversation: string;
+  mode?: "socratic" | "direct";
+  /** Loads the student-model summary once the subject is known. */
+  studentModel?: (subject: string) => Promise<string>;
+  /** Present when the student is answering Lumo's question: skip re-watching and re-solving. */
+  followUp?: NonNullable<TutorResponse["context_cache"]> | null;
 };
 
 export type TutorRun = {
@@ -38,10 +43,21 @@ export type TutorRun = {
  *   (frame annotations are placed inside askTutor when a frame was captured)
  */
 export async function runTutor(input: TutorInput): Promise<TutorRun> {
-  const look = await lookAtMoment(input.media, input.timestamp, input.frameJpeg, input.question, input.live).catch((err) => {
-    console.error("look pass failed", err);
-    return null;
-  });
+  const reuse = input.followUp ?? null;
+  const look = reuse
+    ? null
+    : await lookAtMoment(input.media, input.timestamp, input.frameJpeg, input.question, input.live).catch((err) => {
+        console.error("look pass failed", err);
+        return null;
+      });
+  const subject = reuse?.subject ?? look?.moment.subject ?? "";
+
+  const studentModel = input.studentModel
+    ? await input.studentModel(subject).catch((err) => {
+        console.error("student model unavailable", err);
+        return "";
+      })
+    : "";
 
   const contextFor = (verifiedWork: string | null) =>
     buildContext({
@@ -55,17 +71,19 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
         (c) => c.start_seconds < input.timestamp + MOMENT_AFTER && c.end_seconds > input.timestamp - MOMENT_BEFORE,
       ),
       hasIndex: input.video.index_status === "ready",
-      screenNow: look ? describeMoment(look.moment) : "",
+      screenNow: reuse?.screen_now ?? (look ? describeMoment(look.moment) : ""),
       verifiedWork,
       hasFrame: !!input.frameJpeg,
       conversation: input.conversation,
       question: input.question,
+      mode: input.mode ?? "socratic",
+      studentModel,
     });
 
   let usage: Usage = look?.usage ?? { inputTokens: 0, outputTokens: 0 };
-  let verifiedWork: string | null = null;
-  const hard = !!look && needsSolving(look.moment);
-  if (hard) {
+  let verifiedWork: string | null = reuse?.verified_work ?? null;
+  const hard = reuse ? reuse.level === "advanced" || !!reuse.verified_work : !!look && needsSolving(look.moment);
+  if (hard && !reuse) {
     const solved = await solveWithCode(SOLVER_PROMPT, contextFor(null)).catch((err) => {
       console.error("solve pass failed", err);
       return null;
@@ -88,7 +106,9 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
 
   // Hard questions: review for false or misleading claims, and rewrite once if any are found.
   let review: { ok: boolean; problems: string[] } | null = null;
-  if (hard) {
+  // Guiding questions and hints don't assert much; review the replies that teach content.
+  const teachesContent = ["explain", "example", "wrap_up", "practice"].includes(answer.response.move);
+  if (hard && teachesContent) {
     const reviewed = await reviewAnswer(REVIEW_PROMPT, contextFor(verifiedWork), answer.response).catch((err) => {
       console.error("review pass failed", err);
       return null;
@@ -115,8 +135,16 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
     }
   }
 
+  const contextCache = {
+    screen_now: reuse?.screen_now ?? (look ? describeMoment(look.moment) : ""),
+    verified_work: verifiedWork,
+    subject,
+    level: reuse?.level ?? look?.moment.level ?? "intro",
+    timestamp: input.timestamp,
+  };
+
   return {
-    response: answer.response,
+    response: { ...answer.response, context_cache: contextCache },
     model: answer.model,
     usage,
     moment: look?.moment ?? null,

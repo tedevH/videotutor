@@ -15,7 +15,7 @@ console.log(`Stripe mode: ${key.startsWith("sk_live") ? "LIVE" : "test"}`);
 const existing = await stripe.prices.list({ lookup_keys: [PLANS.pro.monthly.lookupKey, PLANS.pro.yearly.lookupKey], active: true, expand: ["data.product"] });
 let productId = existing.data[0] ? (existing.data[0].product as Stripe.Product).id : null;
 if (!productId) {
-  const product = await stripe.products.create({ name: "VideoTutor Pro", description: PLANS.pro.features.join(" · ") });
+  const product = await stripe.products.create({ name: "LumoTutor Pro", description: PLANS.pro.features.join(" · ") });
   productId = product.id;
   console.log(`Created product ${productId}`);
 }

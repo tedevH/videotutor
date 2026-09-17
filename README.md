@@ -1,4 +1,4 @@
-# VideoTutor
+# LumoTutor
 
 Paste a YouTube lesson. When you're confused, start typing — the video pauses and an AI tutor explains that exact moment, sketching diagrams from what the video just showed.
 

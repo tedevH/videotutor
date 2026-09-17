@@ -21,7 +21,7 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
       <header className="flex items-center justify-between">
-        <span className="text-xl font-semibold tracking-tight">VideoTutor</span>
+        <span className="text-xl font-semibold tracking-tight">LumoTutor</span>
         <div className="flex items-center gap-4 text-sm">
           {isPro ? (
             <span className="rounded-full bg-[#fff1b8] px-3 py-1 font-semibold">Pro</span>
@@ -37,7 +37,7 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
 
       {upgraded && (
         <p className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
-          {isPro ? "You're on Pro. Thanks for supporting VideoTutor!" : "Payment received. Your Pro plan will activate in a few seconds; refresh if it doesn't."}
+          {isPro ? "You're on Pro. Thanks for supporting LumoTutor!" : "Payment received. Your Pro plan will activate in a few seconds; refresh if it doesn't."}
         </p>
       )}
 

@@ -92,6 +92,8 @@ for (const c of cases) {
     chunks,
     studentLevel: "college",
     conversation: "",
+    // Accuracy is graded on complete explanations, not guiding questions.
+    mode: "direct",
   });
   const seconds = (Date.now() - t0) / 1000;
   const text = answerAsText(run.response);

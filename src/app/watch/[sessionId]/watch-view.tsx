@@ -27,6 +27,7 @@ export function WatchView(props: {
   channel: string | null;
   initialStatus: string;
   startAt: number;
+  initialMode: "socratic" | "direct";
   initialMessages: StoredMessage[];
 }) {
   const player = useRef<PlayerHandle>(null);
@@ -47,6 +48,7 @@ export function WatchView(props: {
   const [error, setError] = useState<{ message: string; upgrade?: boolean } | null>(null);
   const [status, setStatus] = useState(props.initialStatus);
   const [duration, setDuration] = useState(0);
+  const [mode, setMode] = useState(props.initialMode);
 
   // Poll until the shared video index is built.
   useEffect(() => {
@@ -129,8 +131,17 @@ export function WatchView(props: {
     }
   }
 
-  async function send() {
-    const text = draft.trim();
+  async function setTutorMode(next: "socratic" | "direct") {
+    setMode(next);
+    await fetch(`/api/sessions/${props.sessionId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: next }),
+    });
+  }
+
+  async function send(override?: string) {
+    const text = (override ?? draft).trim();
     if (!text || sending) return;
     if (pausedAt === null) freezeVideo();
     const timestamp = pausedAt ?? player.current?.currentTime() ?? 0;
@@ -225,7 +236,7 @@ export function WatchView(props: {
       <section className="flex flex-col gap-3 p-3 lg:flex-1 lg:overflow-y-auto lg:p-5">
         <div className="flex items-center justify-between gap-3">
           <Link href="/library" className="text-lg font-semibold tracking-tight">
-            ← VideoTutor
+            ← LumoTutor
           </Link>
           <div className="flex items-center gap-2">
             <IndexStatus status={status} onRetry={retryIndexing} />
@@ -263,6 +274,28 @@ export function WatchView(props: {
 
       {/* Tutor column */}
       <aside className="flex min-h-0 flex-1 flex-col border-t border-line bg-white lg:max-w-[480px] lg:border-l lg:border-t-0">
+        <div className="flex items-center justify-between border-b border-line px-4 py-2 text-xs">
+          <span className="font-semibold">Lumo</span>
+          <div className="flex rounded-full bg-stone-100 p-0.5" role="radiogroup" aria-label="Tutoring style">
+            {(
+              [
+                ["socratic", "Guide me"],
+                ["direct", "Just explain"],
+              ] as const
+            ).map(([value, label]) => (
+              <button
+                key={value}
+                role="radio"
+                aria-checked={mode === value}
+                onClick={() => setTutorMode(value)}
+                title={value === "socratic" ? "Lumo asks guiding questions so you work it out" : "Lumo explains fully right away"}
+                className={`rounded-full px-3 py-1 font-medium transition ${mode === value ? "bg-white shadow-sm" : "text-muted hover:text-foreground"}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {messages.length === 0 && (
             <div className="mt-6 text-center text-muted">
@@ -274,7 +307,14 @@ export function WatchView(props: {
             m.role === "user" ? (
               <UserBubble key={m.id} message={m} onSeek={(t) => resume(t)} />
             ) : (
-              <TutorMessage key={m.id} message={m} onRewatch={(t) => resume(t)} />
+              <TutorMessage
+                key={m.id}
+                message={m}
+                isLatest={m.id === messages[messages.length - 1]?.id && !sending}
+                onRewatch={(t) => resume(t)}
+                onReply={(text) => send(text)}
+                onResume={() => resume()}
+              />
             ),
           )}
           {sending && <Thinking />}
@@ -312,7 +352,7 @@ export function WatchView(props: {
               className="max-h-40 min-h-[44px] flex-1 resize-none rounded-xl border border-line px-3 py-2.5 text-[15px] outline-none field-sizing-content focus:border-accent"
             />
             <button
-              onClick={send}
+              onClick={() => send()}
               disabled={!draft.trim() || sending}
               className="h-[44px] rounded-xl bg-accent px-4 font-medium text-white disabled:opacity-40"
             >
@@ -397,7 +437,19 @@ function UserBubble({ message, onSeek }: { message: StoredMessage; onSeek: (t: n
   );
 }
 
-function TutorMessage({ message, onRewatch }: { message: StoredMessage; onRewatch: (t: number) => void }) {
+function TutorMessage({
+  message,
+  isLatest,
+  onRewatch,
+  onReply,
+  onResume,
+}: {
+  message: StoredMessage;
+  isLatest: boolean;
+  onRewatch: (t: number) => void;
+  onReply: (text: string) => void;
+  onResume: () => void;
+}) {
   const content = message.content as TutorResponse;
   const [rating, setRating] = useState<1 | -1 | null>(null);
 
@@ -418,7 +470,27 @@ function TutorMessage({ message, onRewatch }: { message: StoredMessage; onRewatc
           {content.misconception}
         </p>
       )}
+      {content.assessment && content.assessment.result !== "not_applicable" && (
+        <p
+          className={`text-xs font-semibold ${
+            content.assessment.result === "correct" ? "text-green-700" : content.assessment.result === "partial" ? "text-amber-700" : "text-red-700"
+          }`}
+        >
+          {content.assessment.result === "correct" ? "✓ Right" : content.assessment.result === "partial" ? "◐ Partly there" : "✗ Not quite"}
+        </p>
+      )}
       <TutorBlocks blocks={content.blocks} frameUrl={message.frame_url} />
+      {isLatest && content.awaiting_student && (
+        <div className="flex flex-wrap gap-2">
+          <span className="w-full text-xs text-muted">Your turn. Type your answer, or:</span>
+          {["I'm not sure", "Give me a hint", "Just tell me"].map((reply) => (
+            <button key={reply} onClick={() => onReply(reply)} className="rounded-full border border-line px-3 py-1 text-sm hover:bg-stone-50">
+              {reply}
+            </button>
+          ))}
+        </div>
+      )}
+      {isLatest && content.resolved && <ResumePrompt onResume={onResume} />}
       <div className="flex items-center gap-2 text-xs text-muted">
         {content.rewatch_from !== null && (
           <button onClick={() => onRewatch(content.rewatch_from!)} className="rounded-full border border-line px-3 py-1 hover:bg-stone-50">
@@ -433,6 +505,39 @@ function TutorMessage({ message, onRewatch }: { message: StoredMessage; onRewatc
           👎
         </button>
       </div>
+    </div>
+  );
+}
+
+/** Once Lumo marks a confusion resolved, offer to pick the lecture back up (auto after a few seconds). */
+function ResumePrompt({ onResume }: { onResume: () => void }) {
+  const [seconds, setSeconds] = useState(8);
+  const [cancelled, setCancelled] = useState(false);
+  const resumeRef = useRef(onResume);
+  useEffect(() => {
+    resumeRef.current = onResume;
+  });
+  useEffect(() => {
+    if (cancelled) return;
+    if (seconds <= 0) {
+      resumeRef.current();
+      return;
+    }
+    const t = setTimeout(() => setSeconds((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [seconds, cancelled]);
+
+  return (
+    <div className="flex items-center gap-3 rounded-xl border border-green-200 bg-green-50 px-3 py-2 text-sm text-green-900">
+      <span className="flex-1">{cancelled ? "Ready when you are." : `Back to the lecture in ${seconds}s`}</span>
+      {!cancelled && (
+        <button onClick={() => setCancelled(true)} className="text-xs text-green-800 underline">
+          Stay here
+        </button>
+      )}
+      <button onClick={onResume} className="rounded-full bg-green-700 px-3 py-1 text-xs font-medium text-white">
+        ▶ Resume now
+      </button>
     </div>
   );
 }

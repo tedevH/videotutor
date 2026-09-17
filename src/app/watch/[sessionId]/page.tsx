@@ -10,7 +10,7 @@ export default async function WatchPage({ params }: PageProps<"/watch/[sessionId
 
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, video_id, last_position, videos(title, channel, index_status, provider, source_url)")
+    .select("id, video_id, last_position, mode, videos(title, channel, index_status, provider, source_url)")
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) notFound();
@@ -39,6 +39,7 @@ export default async function WatchPage({ params }: PageProps<"/watch/[sessionId
       channel={video.channel}
       initialStatus={video.index_status}
       startAt={session.last_position}
+      initialMode={session.mode === "direct" ? "direct" : "socratic"}
       initialMessages={(await signFrameUrls((messages ?? []) as StoredMessage[])) as StoredMessage[]}
     />
   );

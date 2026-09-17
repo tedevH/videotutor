@@ -1,4 +1,6 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
+import { lastTutorReply, learnFromTurn } from "@/lib/brain/observe";
+import { studentModelSummary } from "@/lib/brain/profile";
 import { signFrameUrls, uploadFrame } from "@/lib/frames";
 import { mediaForVideo, VIDEO_MEDIA_COLUMNS, type VideoRow } from "@/lib/media";
 import { questionsPerDay } from "@/lib/plans";
@@ -38,7 +40,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // RLS guarantees this only returns the user's own session.
   const { data: session } = await supabase
     .from("sessions")
-    .select(`id, video_id, videos(title, channel, summary, index_status, ${VIDEO_MEDIA_COLUMNS})`)
+    .select(`id, video_id, mode, course_id, videos(title, channel, summary, index_status, ${VIDEO_MEDIA_COLUMNS})`)
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -68,8 +70,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   // Read history before inserting the new question so it isn't counted as "earlier".
-  const [framePath, { data: history }, { data: chunks }] = await Promise.all([
+  const [framePath, previousTutorReply, { data: history }, { data: chunks }] = await Promise.all([
     frame ? uploadFrame(user.id, sessionId, frame) : null,
+    lastTutorReply(sessionId),
     supabase
       .from("messages")
       .select("role, video_timestamp, content")
@@ -118,7 +121,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     chunks: (chunks ?? []) as ChunkRow[],
     studentLevel: profile?.school_level ?? "college",
     conversation: summarizeHistory((history ?? []).reverse()),
+    mode: session.mode === "direct" ? "direct" : "socratic",
+    studentModel: (subject) => studentModelSummary(user.id, subject),
+    // Answering Lumo's question about the same moment: reuse what that exchange already worked out.
+    followUp:
+      previousTutorReply?.awaiting_student && previousTutorReply.context_cache && Math.abs(previousTutorReply.context_cache.timestamp - timestamp) < 5
+        ? previousTutorReply.context_cache
+        : null,
   });
+
+  // Update the student model after responding; it doesn't need to slow the answer down.
+  after(() =>
+    learnFromTurn({ userId: user.id, sessionId, source: "video", response, previousTutorReply, courseId: session.course_id }),
+  );
 
   const [{ data: assistantMsg }] = await Promise.all([
     supabase

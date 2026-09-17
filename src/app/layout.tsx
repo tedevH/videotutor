@@ -8,7 +8,7 @@ const caveat = Caveat({ variable: "--font-caveat", subsets: ["latin"] });
 const serif = Instrument_Serif({ variable: "--font-instrument", subsets: ["latin"], weight: "400", style: ["normal", "italic"] });
 
 export const metadata: Metadata = {
-  title: "VideoTutor",
+  title: "LumoTutor",
   description: "Pause any lecture and ask. Your tutor explains that exact moment and draws on the frame you are stuck on.",
 };
 

@@ -131,9 +131,29 @@ export const tutorJsonSchema = obj(
       },
       ["about_screen", "question_type", "visual", "why"],
     ),
+    move: { type: "string", enum: ["question", "hint", "example", "explain", "check", "practice", "wrap_up"] },
+    awaiting_student: { type: "boolean" },
+    resolved: { type: "boolean" },
+    assessment: obj(
+      { result: { type: "string", enum: ["correct", "partial", "incorrect", "not_applicable"] }, diagnosis: str },
+      ["result", "diagnosis"],
+    ),
+    observations: {
+      type: "array",
+      items: obj(
+        {
+          concept: str,
+          subject: str,
+          signal: { type: "string", enum: ["asked", "confused", "understood", "misconception"] },
+          misconception_key: str,
+          misconception: str,
+        },
+        ["concept", "subject", "signal"],
+      ),
+    },
     misconception: str,
     blocks: { type: "array", items: block },
     rewatch_from: { type: ["number", "null"] },
   },
-  ["plan", "misconception", "blocks", "rewatch_from"],
+  ["plan", "move", "awaiting_student", "resolved", "assessment", "observations", "misconception", "blocks", "rewatch_from"],
 );

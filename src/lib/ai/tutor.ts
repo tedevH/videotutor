@@ -1,5 +1,6 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel, type Part } from "@google/genai";
 import { groundFrameBlock } from "@/lib/ai/ground";
+import { repairLatex } from "@/lib/tutor/latex-repair";
 import { withRetry } from "@/lib/ai/retry";
 import type { Media } from "@/lib/media";
 import { momentJsonSchema, tutorJsonSchema } from "@/lib/tutor/json-schema";
@@ -151,7 +152,7 @@ export async function askTutor(
 
     let error: string;
     try {
-      const parsed = tutorResponse.safeParse(JSON.parse(raw));
+      const parsed = tutorResponse.safeParse(repairLatex(JSON.parse(raw)));
       if (parsed.success) {
         const response = enforceRules(parsed.data, !!input.frameJpeg, input.timestamp);
         return input.frameJpeg ? groundFrames(response, input.frameJpeg, model, usage) : { response, model, usage };
@@ -171,6 +172,11 @@ export async function askTutor(
   return {
     response: {
       plan: { on_screen: "", about_screen: false, question_type: "conceptual", visual: "none", why: "" },
+      move: "explain",
+      awaiting_student: false,
+      resolved: false,
+      assessment: { result: "not_applicable", diagnosis: "" },
+      observations: [],
       misconception: "",
       blocks: [{ type: "text", md: "Sorry, I had trouble answering that one. Could you ask again, maybe a bit more specifically?" }],
       rewatch_from: null,

@@ -19,6 +19,41 @@ export const SYSTEM_PROMPT = `You are an expert tutor for high school and colleg
 - <moment>: captions and notes for the minutes around the pause.
 - <conversation>: earlier questions in this session (for follow-ups).
 
+# Teaching style
+The session has a mode, given in <student>:
+- "socratic" (default): guide the student to understanding instead of handing over answers.
+- "direct": explain clearly and completely right away (still check understanding at the end when useful).
+
+Each reply makes exactly one teaching move ("move"):
+- "question": a single guiding question that makes the student take the next step themselves ("Before calculating anything, what does the problem give you?"). Short. Don't also answer it.
+- "hint": a nudge toward the next step without doing it.
+- "example": a concrete, simpler worked example that shows the idea, then hand back to the student.
+- "explain": the full explanation (with visuals as appropriate).
+- "check": a quick question to confirm the idea landed.
+- "practice": a new problem for the student to try.
+- "wrap_up": confirm they've got it, one-sentence recap, and send them back to the video.
+
+How to choose, in socratic mode:
+1. First reply to a confusion: usually "question" or "hint" aimed at the exact gap. Use "explain" instead when the student asks what the video literally said/showed, asks a factual/definition question, is missing a prerequisite they can't reason out, or says "just tell me" / "I don't know" twice.
+2. Student answered your question:
+   - correct → build on it: next "question", or "check", or "wrap_up" if the original confusion is resolved.
+   - partially correct → acknowledge the right part, "hint" at the rest.
+   - incorrect → diagnose WHY (the specific misconception, not just "wrong"), then "hint" or "example" targeting that misconception.
+   - incorrect twice, or "I don't know" → "explain" fully, then "check".
+3. Switch modality when something didn't land: if a verbal explanation failed, show a visual; if the visual failed, work a concrete example; if the example worked, have them try one ("practice").
+4. Use <student_model>: skip what they've mastered, go slower where they're shaky, target their known misconceptions, and prefer modalities that have worked for them.
+
+Set "awaiting_student" true when your reply ends with something for the student to answer. Set "resolved" true only when the original confusion is clearly cleared up (usually with "wrap_up").
+Set "assessment" when the student's latest message answers a question you asked: result + a one-sentence diagnosis of their thinking. Otherwise result "not_applicable".
+
+# What to observe
+"observations" update the student's long-term learning model. Base them ONLY on what the student said or did in their latest message (never on <student_model> or your own guesses). For each concept involved this turn (usually 1-2), record one signal:
+- "asked": they asked about it (no evidence either way)
+- "confused": they showed they don't understand it yet
+- "understood": they demonstrated understanding (answered correctly, explained it back) — not merely said "ok"
+- "misconception": they revealed a specific wrong belief; set misconception_key as "concept-slug:short-kebab-description" (e.g. "chain-rule:forgets-inner-derivative") and misconception as one clear sentence.
+concept is a short canonical name ("Chain rule", "Eigenvectors", "Le Chatelier's principle"); subject is the course area ("calculus", "linear algebra", "chemistry").
+
 # How to answer
 1. Work out what the student is actually confused about. Name the specific gap or misconception.
 2. Fix it as briefly and clearly as possible, using the video's own notation, variable names, and examples. Match the student's level.
@@ -140,6 +175,10 @@ export function buildContext(opts: {
   hasFrame: boolean;
   conversation: string;
   question: string;
+  mode?: "socratic" | "direct";
+  studentModel?: string;
+  /** Set on follow-up turns: the screen description and verified work from the turn that started this exchange. */
+  reused?: boolean;
 }) {
   const moment = opts.nearby
     .map((c) => {
@@ -162,6 +201,7 @@ summary: ${opts.summary ?? "(not available)"}
 
 <student>
 level: ${opts.level === "high_school" ? "high school" : "college"}
+mode: ${opts.mode ?? "socratic"}
 paused at: ${formatTime(opts.timestamp)} (${Math.floor(opts.timestamp)}s)
 </student>
 
@@ -169,6 +209,10 @@ paused at: ${formatTime(opts.timestamp)} (${Math.floor(opts.timestamp)}s)
 ${opts.screenNow || "(unavailable: rely on the notes)"}
 </screen_now>
 ${opts.verifiedWork ? `\n<verified_work>\n${opts.verifiedWork}\n</verified_work>\n` : ""}
+<student_model>
+${opts.studentModel || "(new student: nothing known yet)"}
+</student_model>
+
 <available_evidence>
 ${evidence.map((e) => `- ${e}`).join("\n")}
 </available_evidence>
@@ -198,12 +242,13 @@ export function summarizeHistory(
     .map((t) => {
       const at = t.video_timestamp !== null ? ` @ ${formatTime(t.video_timestamp)}` : "";
       if (t.role === "user") return `Student${at}: ${String(t.content.text ?? "")}`;
-      const blocks = (t.content.blocks as { type: string; md?: string; title?: string }[] | undefined) ?? [];
+      const blocks = (t.content.blocks as { type: string; md?: string; title?: string; question?: string }[] | undefined) ?? [];
+      const move = typeof t.content.move === "string" ? `[${t.content.move}${t.content.awaiting_student ? ", waiting for student" : ""}] ` : "";
       const text = blocks
-        .map((b) => (b.type === "text" ? b.md : b.type === "check_question" ? null : `[${b.type}: ${b.title ?? ""}]`))
+        .map((b) => (b.type === "text" ? b.md : b.type === "check_question" ? `Check: ${b.question}` : `[${b.type}: ${b.title ?? ""}]`))
         .filter(Boolean)
         .join(" ");
-      return `Tutor: ${text.slice(0, 600)}`;
+      return `Tutor: ${move}${text.slice(0, 900)}`;
     })
     .join("\n");
 }

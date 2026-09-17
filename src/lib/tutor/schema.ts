@@ -112,14 +112,38 @@ export const answerPlan = z.object({
   why: z.string().catch(""),
 });
 
+export const teachingMove = z.enum(["question", "hint", "example", "explain", "check", "practice", "wrap_up"]);
+export type TeachingMove = z.infer<typeof teachingMove>;
+
+/** What the tutor learned about the student this turn; feeds the student model. */
+export const observation = z.object({
+  concept: z.string(),
+  subject: z.string().catch(""),
+  signal: z.enum(["asked", "confused", "understood", "misconception"]),
+  misconception_key: z.string().catch(""),
+  misconception: z.string().catch(""),
+});
+export type Observation = z.infer<typeof observation>;
+
 export const tutorResponse = z.object({
   plan: answerPlan.catch({ on_screen: "", about_screen: false, question_type: "conceptual", visual: "none", why: "" }),
+  move: teachingMove.catch("explain"),
+  awaiting_student: z.boolean().catch(false),
+  resolved: z.boolean().catch(false),
+  assessment: z
+    .object({ result: z.enum(["correct", "partial", "incorrect", "not_applicable"]).catch("not_applicable"), diagnosis: z.string().catch("") })
+    .catch({ result: "not_applicable", diagnosis: "" }),
+  observations: z.array(observation).catch([]),
   misconception: z.string().catch(""),
   blocks: z.array(block).min(1),
   rewatch_from: z.number().nullable().catch(null),
 });
 /** `frame_path` is set by the server (never the model) when the student's paused frame was captured. */
-export type TutorResponse = z.infer<typeof tutorResponse> & { frame_path?: string };
+export type TutorResponse = z.infer<typeof tutorResponse> & {
+  frame_path?: string;
+  /** Server-set: what this exchange was grounded in, reused while the student answers follow-ups. */
+  context_cache?: { screen_now: string; verified_work: string | null; subject: string; level: string; timestamp: number };
+};
 
 export type UserContent = { text: string; frame_path?: string };
 export type StoredMessage = {

@@ -95,7 +95,7 @@ export function DemoVideo() {
             <div className="demo-camera relative h-full w-full" style={{ transform: cameraTransform(cameraFor(t)) }}>
               {/* app bar */}
               <div className="absolute inset-x-6 top-0 flex h-14 items-center justify-between">
-                <span className="text-[24px] font-semibold tracking-tight">VideoTutor</span>
+                <span className="text-[24px] font-semibold tracking-tight">LumoTutor</span>
                 <span className="rounded-full border border-ink/10 bg-white px-4 py-1.5 text-[15px] text-muted">Calculus I · Lecture 7</span>
               </div>
 

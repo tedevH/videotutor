@@ -82,7 +82,7 @@ export default async function Home() {
       {/* nav */}
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
         <Link href="/" className="text-xl font-semibold tracking-tight">
-          VideoTutor
+          LumoTutor
         </Link>
         <nav className="flex items-center gap-5 text-sm">
           <a href="#how" className="hidden hover:underline sm:inline">
@@ -288,8 +288,8 @@ export default async function Home() {
       </section>
 
       <footer className="mx-auto mt-24 flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-ink/15 px-4 py-8 text-sm text-muted sm:px-6">
-        <span className="font-semibold text-ink">VideoTutor</span>
-        <span>© 2026 VideoTutor</span>
+        <span className="font-semibold text-ink">LumoTutor</span>
+        <span>© 2026 LumoTutor</span>
       </footer>
     </main>
   );
