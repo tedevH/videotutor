@@ -59,6 +59,11 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
       setBusy(false);
       if (error) return setError(error.message);
       if (data.session) return finishSignIn();
+      // Supabase returns a user with no identities (and sends no email) when the address is already registered.
+      if (data.user && data.user.identities?.length === 0) {
+        setMode("forgot");
+        return setError("You already have an account with this email. Send yourself a reset link below to set a password.");
+      }
       return setNotice("Almost done: confirm your email with the link we just sent. You only do this once; after that, sign in with your password.");
     }
 
