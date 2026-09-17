@@ -2,6 +2,21 @@
 
 Paste a YouTube lesson. When you're confused, start typing — the video pauses and an AI tutor explains that exact moment, sketching diagrams from what the video just showed.
 
+## The learning system
+
+LumoTutor is a learning system, not just a chatbot: **observe → diagnose → teach → practice → measure → remember → adapt**.
+
+| Piece | Where |
+|---|---|
+| **Lumo Brain** (student model): per-concept knowledge tracing + memory decay, misconceptions, which explanation styles work | `src/lib/brain/`, `/brain` |
+| **Socratic tutoring**: question → hint → example → explain → check, grading the student's replies | `src/lib/tutor/prompt.ts`, `src/lib/tutor/pipeline.ts` |
+| **Practice**: next-best problem (difficulty ladder, recognition vs mechanics, misconception-targeted), code-checked answers, diagnosis, hints | `src/lib/practice/`, `/practice` |
+| **Whiteboard**: Lumo writes/draws/graphs/highlights/erases step by step; students draw back | `src/components/board/`, `/board` |
+| **Courses**: syllabus/slides/notes/homework/exams/videos → units, concepts, prerequisites, exam plan | `src/lib/courses/`, `/courses` |
+| **Memory**: spaced review of concepts you're forgetting | `src/lib/brain/review.ts`, `/home` |
+| **Classroom mode**: voice questions, rewind/pause nudges, auto-resume | `src/app/watch/` |
+| **Subject visuals**: frames, plots, 3D surfaces, linear maps, vector fields, molecules, reactions, free-body diagrams, data structures | `src/components/blocks/` |
+
 ## How it works
 
 1. **Ingest (once per video, shared by all users)**: free YouTube captions are stored immediately, then Gemini Flash-Lite watches the video in 10-minute segments and builds timestamped notes: what's said, what's on screen, equations, concepts (`src/lib/ingest.ts`, `src/lib/ai/gemini.ts`).
@@ -27,7 +42,7 @@ Each case uses about 5 Gemini requests. Detailed results are written to `evals/r
 
 ## Setup
 
-1. Create a [Supabase](https://supabase.com) project, then run every file in `supabase/migrations/` in order (0001 → 0004) in the SQL editor.
+1. Create a [Supabase](https://supabase.com) project, then run every file in `supabase/migrations/` in order (0001 → 0005) in the SQL editor.
 2. In Supabase → Authentication: enable **Email** (and optionally **Google**, then set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`), and add `http://localhost:3000/auth/callback` to the redirect URLs.
 3. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 4. Copy `.env.example` to `.env.local` and fill it in.
