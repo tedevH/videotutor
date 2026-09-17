@@ -40,11 +40,13 @@ export function PracticeView({
   initialConceptId,
   courseId,
   initialTopic,
+  review = false,
   suggestions,
 }: {
   initialConceptId: string | null;
   courseId: string | null;
   initialTopic: string;
+  review?: boolean;
   suggestions: { id: string; name: string; subject: string | null; level: string }[];
 }) {
   const [item, setItem] = useState<Item | null>(null);
@@ -69,22 +71,22 @@ export function PracticeView({
       const res = await fetch("/api/practice/next", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conceptId: target.conceptId ?? undefined, topic: target.topic, courseId: courseId ?? undefined }),
+        body: JSON.stringify({ conceptId: target.conceptId ?? undefined, topic: target.topic, courseId: courseId ?? undefined, review }),
       });
       const data = await res.json();
       setLoading(false);
       if (!res.ok) return setError(data.error ?? "Couldn't load a problem");
       setItem(data.item);
     },
-    [courseId],
+    [courseId, review],
   );
 
   useEffect(() => {
     // Deep links (from a course or the brain page) start immediately.
-    if (!initialConceptId && !initialTopic && !courseId) return;
+    if (!initialConceptId && !initialTopic && !courseId && !review) return;
     const t = setTimeout(() => void loadNext({ conceptId: initialConceptId, topic: initialTopic || undefined }), 0);
     return () => clearTimeout(t);
-  }, [initialConceptId, initialTopic, courseId, loadNext]);
+  }, [initialConceptId, initialTopic, courseId, review, loadNext]);
 
   async function check(value = answer) {
     if (!item || !value.trim()) return;
@@ -300,8 +302,8 @@ export function PracticeView({
                 </>
               )}
               {(solved || solution) && (
-                <button onClick={() => loadNext({ conceptId: item.concept_id })} className="rounded-xl bg-ink px-5 py-2.5 font-medium text-white">
-                  Next problem →
+                <button onClick={() => loadNext(review ? {} : { conceptId: item.concept_id })} className="rounded-xl bg-ink px-5 py-2.5 font-medium text-white">
+                  {review ? "Next review →" : "Next problem →"}
                 </button>
               )}
               <span className="flex-1" />

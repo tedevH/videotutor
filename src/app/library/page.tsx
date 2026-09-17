@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AddVideoForm } from "@/components/add-video-form";
 import { ManageBillingButton } from "@/components/billing-buttons";
-import { SignOutButton } from "@/components/sign-out-button";
+import { AppNav } from "@/components/app-nav";
 import { createClient } from "@/lib/supabase/server";
 import { formatTime } from "@/lib/youtube";
 
@@ -20,20 +20,17 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
 
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
-      <header className="flex items-center justify-between">
-        <span className="text-xl font-semibold tracking-tight">LumoTutor</span>
-        <div className="flex items-center gap-4 text-sm">
-          {isPro ? (
-            <span className="rounded-full bg-[#fff1b8] px-3 py-1 font-semibold">Pro</span>
-          ) : (
-            <Link href="/pricing" className="rounded-full bg-ink px-3 py-1.5 font-medium text-white hover:bg-ink/85">
-              Upgrade
-            </Link>
-          )}
-          {profile?.stripe_customer_id && <ManageBillingButton className="text-muted hover:text-foreground" />}
-          <SignOutButton />
-        </div>
-      </header>
+      <AppNav current="/library" />
+      <div className="mt-4 flex items-center justify-end gap-3 text-sm">
+        {isPro ? (
+          <span className="rounded-full bg-[#fff1b8] px-3 py-1 font-semibold">Pro</span>
+        ) : (
+          <Link href="/pricing" className="rounded-full bg-ink px-3 py-1.5 font-medium text-white hover:bg-ink/85">
+            Upgrade
+          </Link>
+        )}
+        {profile?.stripe_customer_id && <ManageBillingButton className="text-muted hover:text-foreground" />}
+      </div>
 
       {upgraded && (
         <p className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">

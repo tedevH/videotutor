@@ -1,5 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/server";
-import { applyEvidence, conceptSlug, effectiveMastery, masteryLevel, NEW_MASTERY, type Evidence, type MasteryState } from "./model";
+import { applyEvidence, conceptSlug, effectiveMastery, masteryLevel, NEW_MASTERY, recall, type Evidence, type MasteryState } from "./model";
 
 /** Server-side writes to the student model. Students can read their data (RLS) but never write it. */
 
@@ -116,6 +116,7 @@ export type ConceptWithMastery = ConceptRef & {
   exam_weight: number;
   mastery: MasteryState;
   effective: number;
+  recall: number;
   level: ReturnType<typeof masteryLevel>;
 };
 
@@ -131,6 +132,6 @@ export async function listConceptsWithMastery(userId: string, opts: { courseId?:
   const now = Date.now();
   return (concepts ?? []).map((c) => {
     const mastery = byConcept.get(c.id) ?? NEW_MASTERY;
-    return { ...c, mastery, effective: effectiveMastery(mastery, now), level: masteryLevel(mastery, now) };
+    return { ...c, mastery, effective: effectiveMastery(mastery, now), recall: recall(mastery, now), level: masteryLevel(mastery, now) };
   });
 }

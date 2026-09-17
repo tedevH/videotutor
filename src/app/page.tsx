@@ -75,7 +75,7 @@ export default async function Home() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (user) redirect("/library");
+  if (user) redirect("/home");
 
   return (
     <main className="graph-paper flex flex-1 flex-col overflow-x-clip text-ink">

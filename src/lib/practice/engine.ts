@@ -1,4 +1,5 @@
 import { nextDifficulty, nextProblemKind, type Difficulty } from "@/lib/brain/model";
+import { dueReviews } from "@/lib/brain/review";
 import { ensureConcept, getMastery, listConceptsWithMastery, recordEvidence, recordMisconception, resolveMisconception } from "@/lib/brain/store";
 import { createAdminClient } from "@/lib/supabase/server";
 import { generateProblem } from "./generate";
@@ -11,10 +12,15 @@ const ITEM_COLUMNS = "id, concept_id, difficulty, kind, prompt, choices, solutio
  * Picks what to practice: the requested concept, or the weakest concept (in a course, if given) whose
  * prerequisites are in decent shape — a shaky prerequisite gets practiced first.
  */
-export async function chooseConcept(userId: string, opts: { conceptId?: string; courseId?: string }) {
+export async function chooseConcept(userId: string, opts: { conceptId?: string; courseId?: string; review?: boolean }) {
   if (opts.conceptId) return opts.conceptId;
   const concepts = await listConceptsWithMastery(userId, { courseId: opts.courseId });
   if (!concepts.length) return null;
+  // Review mode: the concept most at risk of being forgotten.
+  if (opts.review) {
+    const due = dueReviews(concepts);
+    if (due.length) return due[0].concept.id;
+  }
 
   const db = createAdminClient();
   const { data: prereqs } = await db

@@ -8,7 +8,7 @@ export default async function LoginPage({ searchParams }: PageProps<"/login">) {
         <h1 className="text-2xl font-semibold tracking-tight">LumoTutor</h1>
         <p className="mt-1 text-sm text-muted">Sign in to save your videos and questions.</p>
         {error && <p className="mt-4 text-sm text-red-600">Sign-in failed. Please try again.</p>}
-        <LoginForm next={typeof next === "string" ? next : "/library"} />
+        <LoginForm next={typeof next === "string" ? next : "/home"} />
       </div>
     </main>
   );

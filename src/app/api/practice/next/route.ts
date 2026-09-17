@@ -12,12 +12,12 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 
-  const body = (await request.json()) as { conceptId?: string; courseId?: string; topic?: string; subject?: string };
+  const body = (await request.json()) as { conceptId?: string; courseId?: string; topic?: string; subject?: string; review?: boolean };
   let conceptId = body.conceptId;
   if (!conceptId && body.topic?.trim()) {
     conceptId = (await ensureConceptByName(user.id, body.topic.trim(), body.subject?.trim() || null)).id;
   }
-  conceptId = (await chooseConcept(user.id, { conceptId, courseId: body.courseId })) ?? undefined;
+  conceptId = (await chooseConcept(user.id, { conceptId, courseId: body.courseId, review: body.review })) ?? undefined;
   if (!conceptId) return NextResponse.json({ error: "Tell Lumo what to practice, or ask a few questions in a video first." }, { status: 400 });
 
   const { data: concept } = await createAdminClient().from("concepts").select("name").eq("id", conceptId).eq("user_id", user.id).maybeSingle();

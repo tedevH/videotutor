@@ -6,7 +6,7 @@ import { PracticeView } from "./practice-view";
 export const metadata = { title: "Practice · LumoTutor" };
 
 export default async function PracticePage({ searchParams }: PageProps<"/practice">) {
-  const { concept, course, topic } = await searchParams;
+  const { concept, course, topic, review } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -25,6 +25,7 @@ export default async function PracticePage({ searchParams }: PageProps<"/practic
       initialConceptId={typeof concept === "string" ? concept : null}
       courseId={typeof course === "string" ? course : null}
       initialTopic={typeof topic === "string" ? topic : ""}
+      review={review === "1"}
       suggestions={suggestions}
     />
   );
