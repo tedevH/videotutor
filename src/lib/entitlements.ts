@@ -20,6 +20,21 @@ const startOfMonth = () => {
   return new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)).toISOString();
 };
 
+/** Checks the monthly homework allowance before a new upload. Returns an error message or null. */
+export async function assignmentAllowanceError(userId: string, plan: PlanId) {
+  const limit = limitsFor(plan).assignmentsPerMonth;
+  if (limit === null) return null;
+  const { count } = await createAdminClient()
+    .from("assignments")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .gte("created_at", startOfMonth());
+  if ((count ?? 0) < limit) return null;
+  return plan === "free"
+    ? `The Free plan includes ${limit} homework upload a month. Plus includes 20, or invite 2 friends to unlock 14 days of Plus.`
+    : `You've uploaded this month's ${limit} assignments. Pro has no limit.`;
+}
+
 /** Checks the monthly lecture allowance before adding a new video. Returns an error message or null. */
 export async function lectureAllowanceError(userId: string, plan: PlanId) {
   const limits = limitsFor(plan);

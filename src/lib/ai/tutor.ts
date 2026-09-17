@@ -136,7 +136,7 @@ export async function askTutor(
     drawingPng?: string | null;
     question?: string;
     model?: string;
-    surface?: "video" | "whiteboard";
+    surface?: "video" | "whiteboard" | "worksheet";
   },
 ): Promise<{ response: TutorResponse; model: string; usage: Usage }> {
   const model = input.model || tutorModel();
@@ -270,7 +270,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
  * Checks that an answer actually teaches: a visual it planned can be shown, questions about the screen
  * get a visual, and "explain" moves explain rather than handing over a one-liner.
  */
-function teachingProblem(raw: TutorResponse, enforced: TutorResponse, hasFrame: boolean, question: string, surface: "video" | "whiteboard" = "video"): string | null {
+function teachingProblem(raw: TutorResponse, enforced: TutorResponse, hasFrame: boolean, question: string, surface: "video" | "whiteboard" | "worksheet" = "video"): string | null {
   const asksForVisual = /\b(diagram|graph|draw|picture|plot|visual|show me|sketch)\b/i.test(question);
   const visuals = (r: TutorResponse) => r.blocks.filter((b) => VISUAL_TYPES.has(b.type));
   if (!hasFrame && raw.blocks.some((b) => b.type === "frame")) {

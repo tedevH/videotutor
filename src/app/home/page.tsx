@@ -137,6 +137,10 @@ export default async function HomePage({ searchParams }: PageProps<"/home">) {
                 <p className="text-lg font-semibold">Practice →</p>
                 <p className="mt-1 text-sm text-ink/70">Problems chosen for exactly where you are, with hints and diagnosis.</p>
               </Link>
+              <Link href="/homework" className="rounded-3xl border border-ink/10 bg-[#d8f3dc] p-5 hover:border-ink/30 sm:col-span-2">
+                <p className="text-lg font-semibold">Homework →</p>
+                <p className="mt-1 text-sm text-ink/70">Drop in a problem set, write on the page, and work through it with Lumo watching your steps.</p>
+              </Link>
             </div>
           </div>
 

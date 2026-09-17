@@ -33,6 +33,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     captions?: string;
     recentFrames?: string[];
     drawing?: string | null;
+    page?: number;
   };
   const text = body.text?.trim();
   const timestamp = Math.max(0, body.timestamp ?? 0);
@@ -44,12 +45,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // RLS guarantees this only returns the user's own session.
   const { data: session } = await supabase
     .from("sessions")
-    .select(`id, video_id, mode, course_id, videos(title, channel, summary, index_status, ${VIDEO_MEDIA_COLUMNS})`)
+    .select(`id, video_id, mode, course_id, assignment_id, videos(title, channel, summary, index_status, ${VIDEO_MEDIA_COLUMNS})`)
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
 
   const videoRow = session.videos as unknown as VideoRow | null;
+  // Homework sessions: the page the student is on, and the problems printed on it.
+  const worksheet = session.assignment_id ? await worksheetContext(supabase, session.assignment_id, Math.max(1, Math.floor(body.page ?? 1))) : null;
   const db = createAdminClient();
   const [entitlement, { count: usedToday }] = await Promise.all([
     planFor(user.id),
@@ -127,7 +130,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     frameJpeg: frame,
     drawingPng: drawing,
     video: (session.videos as unknown as { title: string | null; channel: string | null; summary: string | null; index_status: string } | null) ?? {
-      title: "Whiteboard session",
+      title: worksheet?.title ?? "Whiteboard session",
       channel: null,
       summary: null,
       index_status: "ready",
@@ -137,9 +140,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     verifiedMath: entitlement.limits.verifiedMath,
     tutorModel: entitlement.limits.bestModels ? process.env.GEMINI_PRO_TUTOR_MODEL || "gemini-3.5-flash" : undefined,
     conversation: summarizeHistory((history ?? []).reverse()),
-    mode: session.mode === "direct" ? "direct" : "socratic",
-    surface: videoRow ? "video" : "whiteboard",
-    boardState: videoRow ? null : describeBoard((history ?? []) as { role: string; content: unknown }[]),
+    // A quiz or exam is always guided: "just explain" would hand over the answers.
+    mode: worksheet?.graded ? "socratic" : session.mode === "direct" ? "direct" : "socratic",
+    surface: worksheet ? "worksheet" : videoRow ? "video" : "whiteboard",
+    boardState: videoRow || worksheet ? null : describeBoard((history ?? []) as { role: string; content: unknown }[]),
+    worksheet: worksheet?.text ?? null,
+    graded: worksheet?.graded ?? false,
     studentModel: (subject) => studentModelSummary(user.id, subject),
     // Answering Lumo's question about the same moment: reuse what that exchange already worked out.
     followUp:
@@ -178,4 +184,25 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   ]);
 
   return NextResponse.json({ messages: await signFrameUrls([userMsg, assistantMsg]) });
+}
+
+/** The assignment page the student is looking at: its printed problems and whether it's graded. */
+async function worksheetContext(supabase: Awaited<ReturnType<typeof createClient>>, assignmentId: string, page: number) {
+  const [{ data: assignment }, { data: problems }, { data: pageRow }] = await Promise.all([
+    supabase.from("assignments").select("title, kind").eq("id", assignmentId).maybeSingle(),
+    supabase.from("assignment_problems").select("label, prompt, status").eq("assignment_id", assignmentId).eq("page_number", page).order("position"),
+    supabase.from("assignment_pages").select("text").eq("assignment_id", assignmentId).eq("page_number", page).maybeSingle(),
+  ]);
+  if (!assignment) return null;
+
+  const lines = (problems ?? []).map((p) => `- ${p.label} (${p.status}): ${p.prompt}`);
+  const text = [
+    `assignment: ${assignment.title} (${assignment.kind}), page ${page}`,
+    lines.length ? `problems on this page:\n${lines.join("\n")}` : "",
+    pageRow?.text ? `printed on the page:\n${pageRow.text.slice(0, 4000)}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
+
+  return { title: assignment.title, graded: assignment.kind === "quiz" || assignment.kind === "exam", text };
 }

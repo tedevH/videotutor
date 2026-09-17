@@ -106,6 +106,9 @@ export function Whiteboard({
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [penColor, setPenColor] = useState("#1c1b19");
   const svgRef = useRef<SVGSVGElement>(null);
+  // Highlights have to sit on the text KaTeX actually rendered, not on a character-count estimate.
+  const writeEls = useRef(new Map<string, SVGForeignObjectElement>());
+  const [measured, setMeasured] = useState<Record<string, Box>>({});
   const gridId = `board-grid-${useId().replace(/:/g, "")}`;
   const active = useRef<Stroke | null>(null);
 
@@ -127,6 +130,44 @@ export function Whiteboard({
   const byId = useMemo(() => new Map(ops.filter((o) => o.id).map((o) => [o.id, o])), [ops]);
   const narration = steps.find((s) => s.step === step)?.narration;
 
+  const measuredRef = useRef<Record<string, Box>>({});
+  useEffect(() => {
+    const measure = () => {
+      const svg = svgRef.current;
+      const ctm = svg?.getScreenCTM();
+      if (!svg || !ctm) return;
+      const inverse = ctm.inverse();
+      const next: Record<string, Box> = {};
+      for (const [id, el] of writeEls.current) {
+        const content = el.firstElementChild?.firstElementChild ?? el.firstElementChild;
+        const r = content?.getBoundingClientRect();
+        if (!r || !r.width || !r.height) continue;
+        const a = new DOMPoint(r.left, r.top).matrixTransform(inverse);
+        const b = new DOMPoint(r.right, r.bottom).matrixTransform(inverse);
+        next[id] = { x: a.x, y: a.y, w: b.x - a.x, h: b.y - a.y };
+      }
+      const old = measuredRef.current;
+      const same =
+        Object.keys(next).length === Object.keys(old).length &&
+        Object.entries(next).every(([id, b]) => {
+          const prev = old[id];
+          return prev && Math.abs(prev.x - b.x) < 0.05 && Math.abs(prev.y - b.y) < 0.05 && Math.abs(prev.w - b.w) < 0.05 && Math.abs(prev.h - b.h) < 0.05;
+        });
+      if (same) return;
+      measuredRef.current = next;
+      setMeasured(next);
+    };
+    // Measure after fonts and KaTeX have laid out, and again whenever the board is resized.
+    const raf = requestAnimationFrame(measure);
+    const observer = new ResizeObserver(measure);
+    if (svgRef.current) observer.observe(svgRef.current);
+    for (const el of writeEls.current.values()) observer.observe(el);
+    return () => {
+      cancelAnimationFrame(raf);
+      observer.disconnect();
+    };
+  }, [items]);
+
   useEffect(() => {
     if (!captureRef) return;
     // Only worth sending when the student has drawn something: Lumo already knows its own ops from <board_now>.
@@ -145,7 +186,7 @@ export function Whiteboard({
   };
 
   async function exportPng() {
-    const svg = buildExportSvg(items, strokes, byId, height);
+    const svg = buildExportSvg(items, strokes, byId, height, measuredRef.current);
     const img = new Image();
     img.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
     await img.decode();
@@ -208,7 +249,19 @@ export function Whiteboard({
           switch (o.op) {
             case "write":
               return (
-                <foreignObject key={key} x={o.x} y={o.y} width={Math.max(10, W - o.x - 1)} height={FONT[o.size] * 2.2} className="sketch-fade overflow-visible">
+                <foreignObject
+                  key={key}
+                  ref={(el) => {
+                    if (!o.id) return;
+                    if (el) writeEls.current.set(o.id, el);
+                    else writeEls.current.delete(o.id);
+                  }}
+                  x={o.x}
+                  y={o.y}
+                  width={Math.max(10, W - o.x - 1)}
+                  height={FONT[o.size] * 2.2}
+                  className="sketch-fade overflow-visible"
+                >
                   {/* Rendered 10x larger and scaled down: browsers round hairlines (fraction bars) up to 1px before scaling. */}
                   <div style={{ fontSize: FONT[o.size] * 10, lineHeight: 1.3, color, whiteSpace: "nowrap", width: "1000%", transform: "scale(0.1)", transformOrigin: "0 0" }}>
                     <MarkdownBlock md={o.text} className="[&_.katex-display]:my-0 [&_p]:my-0" />
@@ -250,7 +303,7 @@ export function Whiteboard({
             }
             case "highlight": {
               const target = o.target ? byId.get(o.target) : null;
-              const box = (target && boxOf(target)) ?? boxOf(o);
+              const box = (o.target && measured[o.target]) ?? (target && boxOf(target)) ?? boxOf(o);
               if (!box) return null;
               const pad = 1.5;
               return (
@@ -333,7 +386,7 @@ export function Whiteboard({
 }
 
 /** Plain SVG (no HTML) of the board and the student's ink, so it rasterizes reliably for the tutor. */
-function buildExportSvg(items: BoardOp[], strokes: Stroke[], byId: Map<string, BoardOp>, height: number) {
+function buildExportSvg(items: BoardOp[], strokes: Stroke[], byId: Map<string, BoardOp>, height: number, measured: Record<string, Box> = {}) {
   const esc = (s: string) => s.replace(/[<>&"]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;" })[c]!);
   const parts: string[] = [];
   for (const o of items) {
@@ -347,7 +400,7 @@ function buildExportSvg(items: BoardOp[], strokes: Stroke[], byId: Map<string, B
       if (g) parts.push(`<path d="${g.curve}" fill="none" stroke="${color}" stroke-width="0.5"/>`);
     } else if (o.op === "highlight") {
       const t = o.target ? byId.get(o.target) : null;
-      const b = (t && boxOf(t)) ?? boxOf(o);
+      const b = (o.target && measured[o.target]) ?? (t && boxOf(t)) ?? boxOf(o);
       if (b) parts.push(`<ellipse cx="${b.x + b.w / 2}" cy="${b.y + b.h / 2}" rx="${b.w / 2 + 2}" ry="${b.h / 2 + 1.5}" fill="none" stroke="${color}" stroke-width="0.5"/>`);
     }
   }

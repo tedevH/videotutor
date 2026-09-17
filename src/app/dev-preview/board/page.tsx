@@ -14,6 +14,8 @@ const sample = tutorResponse.parse({
         { op: "highlight", step: 4, target: "d", color: "orange" },
         { op: "graph", id: "g", step: 3, x: 58, y: 8, w: 36, h: 40, fn: "sin(x^2)", xDomain: [-3, 3], yDomain: [-1.2, 1.2], color: "purple", shade: null },
         { op: "draw", step: 4, shape: "arrow", points: [[40, 42], [52, 30]], color: "red", label: "slope" },
+        { op: "write", id: "roots", step: 5, x: 5, y: 42, text: "$x = 0,\\ x = 1$", size: "lg", color: "blue" },
+        { op: "highlight", step: 6, target: "roots", color: "ink" },
       ],
       steps: [
         { step: 1, narration: "Start with the function." },

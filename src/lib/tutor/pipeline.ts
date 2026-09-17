@@ -22,9 +22,13 @@ export type TutorInput = {
   conversation: string;
   mode?: "socratic" | "direct";
   /** "whiteboard" when the session has no video: answers must be drawn on the shared board. */
-  surface?: "video" | "whiteboard";
+  surface?: "video" | "whiteboard" | "worksheet";
   /** Ops already on the shared board, so Lumo extends the board instead of restarting it. */
   boardState?: string | null;
+  /** The problems on the assignment page the student is on. */
+  worksheet?: string | null;
+  /** A quiz or exam: guide only, no answers. */
+  graded?: boolean;
   /** Loads the student-model summary once the subject is known. */
   studentModel?: (subject: string) => Promise<string>;
   /** Code-checked solving and review for hard questions (paid plans). */
@@ -90,6 +94,8 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
       studentModel,
       surface: input.surface ?? "video",
       boardState: input.boardState ?? null,
+      worksheet: input.worksheet ?? null,
+      graded: input.graded ?? false,
     });
 
   let usage: Usage = look?.usage ?? { inputTokens: 0, outputTokens: 0 };

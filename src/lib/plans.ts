@@ -9,6 +9,8 @@ export type PlanLimits = {
   lecturesPerMonth: number | null;
   lectureHoursPerMonth: number | null;
   tutorQuestionsPerDay: number;
+  /** Homework/quizzes uploaded per month; null is unlimited. */
+  assignmentsPerMonth: number | null;
   practiceProblemsPerDay: number;
   voice: boolean;
   /** Code-checked solving and answer review for hard questions. */
@@ -35,13 +37,15 @@ export const PLANS: Record<
       lecturesPerMonth: 2,
       lectureHoursPerMonth: null,
       tutorQuestionsPerDay: 15,
+      assignmentsPerMonth: 1,
       practiceProblemsPerDay: 5,
       voice: false,
       verifiedMath: false,
       examPrep: false,
       bestModels: false,
     },
-    features: ["2 lectures a month", "15 tutor questions a day", "5 practice problems a day", "Basic learning memory", "Whiteboard and courses"],
+    features: ["2 lectures a month", "15 tutor questions a day",
+      "1 homework upload a month", "5 practice problems a day", "Basic learning memory", "Whiteboard and courses"],
   },
   plus: {
     name: "Plus",
@@ -50,6 +54,7 @@ export const PLANS: Record<
       lecturesPerMonth: null,
       lectureHoursPerMonth: 25,
       tutorQuestionsPerDay: 150,
+      assignmentsPerMonth: 20,
       practiceProblemsPerDay: 60,
       voice: true,
       verifiedMath: true,
@@ -60,6 +65,7 @@ export const PLANS: Record<
       "25 hours of lectures a month",
       "150 tutor questions a day",
       "60 practice problems a day",
+      "20 homework or quiz uploads a month",
       "Code-verified answers on hard problems",
       "Voice tutoring",
       "AI-drawn diagrams and whiteboard",
@@ -77,6 +83,7 @@ export const PLANS: Record<
       lecturesPerMonth: null,
       lectureHoursPerMonth: 100,
       tutorQuestionsPerDay: 400,
+      assignmentsPerMonth: null,
       practiceProblemsPerDay: 200,
       voice: true,
       verifiedMath: true,
@@ -87,6 +94,7 @@ export const PLANS: Record<
       "100 hours of lectures a month",
       "400 tutor questions a day",
       "200 practice problems a day",
+      "Unlimited homework uploads",
       "Everything in Plus",
       "Highest-quality AI models",
       "Advanced diagrams and visualizations",

@@ -5,6 +5,7 @@ const LINKS = [
   ["/home", "Home"],
   ["/library", "Videos"],
   ["/courses", "Courses"],
+  ["/homework", "Homework"],
   ["/practice", "Practice"],
   ["/board", "Whiteboard"],
   ["/brain", "Lumo Brain"],

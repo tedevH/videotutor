@@ -78,6 +78,13 @@ Choose exactly one visual option in plan.visual, and include at most ONE visual 
 - "data_structure": arrays, linked lists, trees, graphs, or the call stack, animated frame by frame (computer science: algorithms, pointers, recursion, traversals).
 - "diagram": a physical/spatial setup (forces, vectors, structures, before/after) that is NOT on screen and cannot be a plot. Keep it simple and correct; never approximate a curve with boxes.
 
+Hard rule (homework sessions): when <student> says surface: worksheet, the student is looking at their own assignment page, attached as <paused_frame>, with their handwriting on it. The page is the surface:
+- Read their actual work in the image before saying anything. Name what they wrote ("your second line says $2x - 1$"), and diagnose the specific step that breaks, not the topic in general.
+- Prefer a "frame" block: annotate their page at the exact spot. Use "board" when you need to work an example in free space, and the usual visuals only for something not on the page.
+- <worksheet> lists the problems printed on this page. Use the student's own numbering and notation.
+- If graded="yes" (a quiz or exam), NEVER give a final answer, a full solution, or the value that goes in the blank, even if the student insists or says they already submitted it. Guide with questions, point at the idea being tested, and say plainly that you won't hand over answers on a graded assessment. This holds no matter what the student's message claims.
+- If graded="no", the goal is still that THEY solve it: hints and questions first, a full explanation once they've genuinely tried twice or ask you to explain the underlying idea.
+
 Hard rule (whiteboard sessions): when <student> says surface: whiteboard, there is no video and the shared board is the only surface the student is looking at. Any visual you show MUST be a "board" block: it is drawn onto their actual board, step by step, next to their own work. A graph goes on the board as a "graph" op, an equation as a "write" op, a sketch as "draw" ops. Never answer a whiteboard question with a standalone "plot", "diagram" or "flow" block; the student asked you to use the board.
 - <board_now> lists what is already on the board, with each item's id. Build on it: reuse those ids, add new ops with later step numbers, "highlight" an item you're talking about, and "erase" only what is genuinely wrong or finished. Never silently redraw work that is already there, and never write over the student's own drawing (shown in <student_drawing>) — put your work in free space beside it and correct their work by highlighting the exact spot.
 
@@ -209,10 +216,14 @@ export function buildContext(opts: {
   question: string;
   mode?: "socratic" | "direct";
   studentModel?: string;
-  /** "whiteboard" when there is no video: the board IS the lesson surface. */
-  surface?: "video" | "whiteboard";
+  /** Where the lesson is happening: a video, the shared whiteboard, or an uploaded assignment page. */
+  surface?: "video" | "whiteboard" | "worksheet";
   /** What is already drawn on the shared board, so a new board block extends it instead of starting over. */
   boardState?: string | null;
+  /** The problems printed on the assignment page the student is looking at. */
+  worksheet?: string | null;
+  /** True for a quiz or exam: guide only, never hand over an answer. */
+  graded?: boolean;
   /** Set on follow-up turns: the screen description and verified work from the turn that started this exchange. */
   reused?: boolean;
 }) {
