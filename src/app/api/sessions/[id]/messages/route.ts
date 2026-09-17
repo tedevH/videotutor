@@ -1,14 +1,13 @@
 import { NextResponse } from "next/server";
-import { addUsage, askTutor, lookAtMoment } from "@/lib/ai/tutor";
 import { signFrameUrls, uploadFrame } from "@/lib/frames";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
-import { buildContext, buildOutline, summarizeHistory, SYSTEM_PROMPT, type ChunkRow } from "@/lib/tutor/prompt";
+import { runTutor } from "@/lib/tutor/pipeline";
+import { summarizeHistory, type ChunkRow } from "@/lib/tutor/prompt";
 
-export const maxDuration = 120;
+// Hard questions run a code-checked solve pass, which can take a minute or more.
+export const maxDuration = 300;
 
 const FREE_DAILY_QUESTIONS = 50;
-const MOMENT_BEFORE = 150;
-const MOMENT_AFTER = 20;
 const HISTORY_MESSAGES = 8;
 const MAX_FRAME_BASE64 = 2_000_000;
 
@@ -49,13 +48,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
 
   // Read history before inserting the new question so it isn't counted as "earlier".
-  // Looking at the paused moment is the slow part, so it runs alongside the reads.
-  const [framePath, look, { data: history }, { data: chunks }] = await Promise.all([
+  const [framePath, { data: history }, { data: chunks }] = await Promise.all([
     frame ? uploadFrame(user.id, sessionId, frame) : null,
-    lookAtMoment(session.video_id, timestamp, frame).catch((err) => {
-      console.error("look pass failed", err);
-      return null;
-    }),
     supabase
       .from("messages")
       .select("role, video_timestamp, content")
@@ -81,31 +75,16 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .single();
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
 
-  const allChunks = (chunks ?? []) as ChunkRow[];
-  const video = session.videos as unknown as {
-    title: string | null;
-    channel: string | null;
-    summary: string | null;
-    index_status: string;
-  };
-
-  const context = buildContext({
-    title: video.title,
-    channel: video.channel,
-    summary: video.summary,
-    level: profile?.school_level ?? "college",
+  const { response, model, usage } = await runTutor({
+    videoId: session.video_id,
     timestamp,
-    outline: buildOutline(allChunks),
-    nearby: allChunks.filter((c) => c.start_seconds < timestamp + MOMENT_AFTER && c.end_seconds > timestamp - MOMENT_BEFORE),
-    hasIndex: video.index_status === "ready",
-    screenNow: look?.description ?? "",
-    hasFrame: !!frame,
-    conversation: summarizeHistory((history ?? []).reverse()),
     question: text,
+    frameJpeg: frame,
+    video: session.videos as unknown as { title: string | null; channel: string | null; summary: string | null; index_status: string },
+    chunks: (chunks ?? []) as ChunkRow[],
+    studentLevel: profile?.school_level ?? "college",
+    conversation: summarizeHistory((history ?? []).reverse()),
   });
-
-  const { response, model, usage: answerUsage } = await askTutor(SYSTEM_PROMPT, { context, frameJpeg: frame, timestamp });
-  const usage = look ? addUsage(look.usage, answerUsage) : answerUsage;
 
   const [{ data: assistantMsg }] = await Promise.all([
     supabase

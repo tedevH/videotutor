@@ -69,6 +69,38 @@ export const block = z.discriminatedUnion("type", [
     vlines: z.array(z.object({ x: z.number(), label: z.string().optional() })).catch([]),
   }),
   z.object({ type: z.literal("check_question"), question: z.string(), answer: z.string() }),
+  z.object({
+    type: z.literal("steps"),
+    title: z.string().catch(""),
+    steps: z.array(z.object({ math: z.string(), note: z.string().catch("") })).min(1),
+  }),
+  z.object({
+    type: z.literal("transform2d"),
+    title: z.string().catch(""),
+    matrix: z.tuple([z.tuple([z.number(), z.number()]), z.tuple([z.number(), z.number()])]),
+    vectors: z.array(z.object({ x: z.number(), y: z.number(), label: z.string().catch("") })).catch([]),
+    show_eigenvectors: z.boolean().catch(true),
+  }),
+  z.object({
+    type: z.literal("plot3d"),
+    title: z.string().catch(""),
+    z: z.string(),
+    xDomain: z.tuple([z.number(), z.number()]).catch([-3, 3]),
+    yDomain: z.tuple([z.number(), z.number()]).catch([-3, 3]),
+    view: z.enum(["surface", "contour"]).catch("surface"),
+    points: z.array(z.object({ x: z.number(), y: z.number(), label: z.string().catch("") })).catch([]),
+    gradients_at: z.array(z.object({ x: z.number(), y: z.number() })).catch([]),
+    tangent_plane_at: z.object({ x: z.number(), y: z.number() }).nullable().catch(null),
+  }),
+  z.object({
+    type: z.literal("vector_field"),
+    title: z.string().catch(""),
+    fx: z.string(),
+    fy: z.string(),
+    xDomain: z.tuple([z.number(), z.number()]).catch([-3, 3]),
+    yDomain: z.tuple([z.number(), z.number()]).catch([-3, 3]),
+    curve: z.object({ x: z.string(), y: z.string(), t: z.tuple([z.number(), z.number()]) }).nullable().catch(null),
+  }),
 ]);
 export type Block = z.infer<typeof block>;
 
@@ -76,7 +108,7 @@ export const answerPlan = z.object({
   on_screen: z.string().catch(""),
   about_screen: z.boolean().catch(false),
   question_type: z.enum(["conceptual", "procedural", "factual", "visual", "follow_up", "off_topic"]).catch("conceptual"),
-  visual: z.enum(["none", "frame", "plot", "diagram", "flow"]).catch("none"),
+  visual: z.enum(["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field"]).catch("none"),
   why: z.string().catch(""),
 });
 
@@ -115,3 +147,14 @@ export const videoIndex = z.object({
   ),
 });
 export type VideoIndex = z.infer<typeof videoIndex>;
+
+/** Pass 1 output: what the student is looking at, and how hard the question is. */
+export const moment = z.object({
+  on_screen: z.string().catch(""),
+  last_30_seconds: z.string().catch(""),
+  subject: z.string().catch(""),
+  level: z.enum(["intro", "intermediate", "advanced"]).catch("intro"),
+  needs_computation: z.boolean().catch(false),
+  needs_proof_or_derivation: z.boolean().catch(false),
+});
+export type Moment = z.infer<typeof moment>;

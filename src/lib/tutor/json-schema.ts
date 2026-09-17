@@ -65,8 +65,60 @@ const block = {
       ["type", "title", "elements", "steps"],
     ),
     obj({ type: { type: "string", enum: ["check_question"] }, question: str, answer: str }, ["type", "question", "answer"]),
+    obj(
+      { type: { type: "string", enum: ["steps"] }, title: str, steps: { type: "array", items: obj({ math: str, note: str }, ["math", "note"]) } },
+      ["type", "title", "steps"],
+    ),
+    obj(
+      {
+        type: { type: "string", enum: ["transform2d"] },
+        title: str,
+        matrix: { type: "array", items: pair, minItems: 2, maxItems: 2 },
+        vectors: { type: "array", items: obj({ x: num, y: num, label: str }, ["x", "y"]) },
+        show_eigenvectors: { type: "boolean" },
+      },
+      ["type", "title", "matrix"],
+    ),
+    obj(
+      {
+        type: { type: "string", enum: ["plot3d"] },
+        title: str,
+        z: str,
+        xDomain: pair,
+        yDomain: pair,
+        view: { type: "string", enum: ["surface", "contour"] },
+        points: { type: "array", items: obj({ x: num, y: num, label: str }, ["x", "y"]) },
+        gradients_at: { type: "array", items: obj({ x: num, y: num }, ["x", "y"]) },
+        tangent_plane_at: { anyOf: [obj({ x: num, y: num }, ["x", "y"]), { type: "null" }] },
+      },
+      ["type", "title", "z", "xDomain", "yDomain", "view"],
+    ),
+    obj(
+      {
+        type: { type: "string", enum: ["vector_field"] },
+        title: str,
+        fx: str,
+        fy: str,
+        xDomain: pair,
+        yDomain: pair,
+        curve: { anyOf: [obj({ x: str, y: str, t: pair }, ["x", "y", "t"]), { type: "null" }] },
+      },
+      ["type", "title", "fx", "fy", "xDomain", "yDomain"],
+    ),
   ],
 };
+
+export const momentJsonSchema = obj(
+  {
+    on_screen: str,
+    last_30_seconds: str,
+    subject: str,
+    level: { type: "string", enum: ["intro", "intermediate", "advanced"] },
+    needs_computation: { type: "boolean" },
+    needs_proof_or_derivation: { type: "boolean" },
+  },
+  ["on_screen", "last_30_seconds", "subject", "level", "needs_computation", "needs_proof_or_derivation"],
+);
 
 export const tutorJsonSchema = obj(
   {
@@ -74,7 +126,7 @@ export const tutorJsonSchema = obj(
       {
         about_screen: { type: "boolean" },
         question_type: { type: "string", enum: ["conceptual", "procedural", "factual", "visual", "follow_up", "off_topic"] },
-        visual: { type: "string", enum: ["none", "frame", "plot", "diagram", "flow"] },
+        visual: { type: "string", enum: ["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field"] },
         why: str,
       },
       ["about_screen", "question_type", "visual", "why"],

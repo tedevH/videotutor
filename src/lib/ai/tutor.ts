@@ -1,8 +1,8 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel, type Part } from "@google/genai";
 import { groundFrameBlock } from "@/lib/ai/ground";
 import { withRetry } from "@/lib/ai/retry";
-import { tutorJsonSchema } from "@/lib/tutor/json-schema";
-import { tutorResponse, type TutorResponse } from "@/lib/tutor/schema";
+import { momentJsonSchema, tutorJsonSchema } from "@/lib/tutor/json-schema";
+import { moment, tutorResponse, type Moment, type TutorResponse } from "@/lib/tutor/schema";
 
 /** How much video before the pause the tutor looks at directly. */
 const CLIP_BEFORE_SECONDS = 30;
@@ -24,38 +24,80 @@ const framePart = (jpeg: string): Part => ({
 });
 
 /**
- * Pass 1: look at the moment of the pause. Asked on its own, the model describes the screen
- * precisely; buried inside the full tutoring prompt it tends to skim the video.
+ * Pass 1: look at the moment of the pause and size up the question. Asked on its own, the model
+ * describes the screen precisely; buried inside the full tutoring prompt it tends to skim the video.
  */
-export async function lookAtMoment(videoId: string, timestamp: number, frameJpeg: string | null) {
+export async function lookAtMoment(videoId: string, timestamp: number, frameJpeg: string | null, question: string) {
   const t = Math.floor(timestamp);
   const parts: Part[] = [clipPart(videoId, t)];
   if (frameJpeg) parts.push({ text: "Exact frame at the pause:" }, framePart(frameJpeg));
   parts.push({
-    text: `This clip ends at the moment a student paused the video. Report:
+    text: `This clip ends at the moment a student paused the video and asked: "${question}"
 
-ON SCREEN AT THE PAUSE: describe precisely everything visible in the final second${frameJpeg ? " (the exact frame is attached)" : ""}: every graph (axes, tick values, curves and their equations, shaded regions and colors, marked points), diagram (parts, arrows, labels, how they connect), equations exactly as written (LaTeX), code, board work. Say where things are (top-left, center, etc.). If nothing instructional is visible, say "speaker only".
-
-LAST 30 SECONDS: what was said and shown, in order, in 3-6 sentences.`,
+Report as JSON:
+- on_screen: precisely everything visible in the final second${frameJpeg ? " (the exact frame is attached)" : ""}: every graph (axes, tick values, curves and their equations, shaded regions and colors, marked points), diagram (parts, arrows, labels, how they connect), equations and matrices exactly as written (LaTeX), code, board work, and where each thing is. "speaker only" if nothing instructional is visible.
+- last_30_seconds: what was said and shown, in order, in 3-6 sentences.
+- subject: the specific course topic (e.g. "linear algebra: eigenvalues", "multivariable calculus: gradients").
+- level: "intro" (high school / first-year), "intermediate", or "advanced" (upper-division: linear algebra, multivariable, differential equations, real analysis, physical chemistry, etc.).
+- needs_computation: true if a correct answer requires computing something (a matrix, integral, derivative, eigenvalues, numeric result) rather than only explaining.
+- needs_proof_or_derivation: true if the answer should walk through a derivation, proof, or multi-step argument.`,
   });
 
   const res = await withRetry(() =>
     client().models.generateContent({
       model: tutorModel(),
       contents: [{ role: "user", parts }],
-      config: { temperature: 0.1, maxOutputTokens: 1500, thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL } },
+      config: {
+        temperature: 0.1,
+        maxOutputTokens: 2000,
+        responseMimeType: "application/json",
+        responseJsonSchema: momentJsonSchema,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
+      },
     }),
   );
-  return {
-    description: res.text ?? "",
-    usage: usageOf(res.usageMetadata),
-  };
+  return { moment: moment.parse(JSON.parse(res.text ?? "{}")), usage: usageOf(res.usageMetadata) };
 }
 
-/** Pass 2: answer the question, grounded in pass 1 and (when captured) the exact frame. */
+export function needsSolving(m: Moment) {
+  return m.needs_computation || m.needs_proof_or_derivation || m.level === "advanced";
+}
+
+/**
+ * Pass 2 (hard questions only): work the problem out with high reasoning and real code
+ * execution, so every number and symbolic result in the final answer has been checked.
+ */
+export async function solveWithCode(system: string, context: string) {
+  const res = await withRetry(() =>
+    client().models.generateContent({
+      model: process.env.GEMINI_SOLVER_MODEL || tutorModel(),
+      contents: [{ role: "user", parts: [{ text: context }] }],
+      config: {
+        systemInstruction: system,
+        tools: [{ codeExecution: {} }],
+        temperature: 0.2,
+        maxOutputTokens: 8000,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+      },
+    }),
+  );
+
+  // Keep the model's reasoning text and the actual program output; the output is the ground truth.
+  const work = (res.candidates?.[0]?.content?.parts ?? [])
+    .map((p) => {
+      if (p.text) return p.text;
+      if (p.codeExecutionResult?.output) return `[code output]\n${p.codeExecutionResult.output.trim()}`;
+      return "";
+    })
+    .filter(Boolean)
+    .join("\n\n");
+  return { work, usage: usageOf(res.usageMetadata) };
+}
+
+/** Pass 3: answer the question, grounded in the earlier passes and (when captured) the exact frame. */
 export async function askTutor(
   system: string,
-  input: { context: string; frameJpeg: string | null; timestamp: number },
+  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel },
 ): Promise<{ response: TutorResponse; model: string; usage: Usage }> {
   const model = tutorModel();
   const parts: Part[] = [{ text: input.context }];
@@ -77,7 +119,7 @@ export async function askTutor(
           temperature: 0.3,
           maxOutputTokens: 6000,
           // Choosing a visual and locating things on the frame benefit from some reasoning.
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },
+          thinkingConfig: { thinkingLevel: input.thinking ?? ThinkingLevel.LOW },
         },
       }),
     );
@@ -134,6 +176,30 @@ async function groundFrames(response: TutorResponse, frameJpeg: string, model: s
   return { response: { ...response, blocks: blocks.filter((b) => b !== null) }, model, usage: total };
 }
 
+/** Pass 4 (hard questions only): catch false or misleading claims the code checks can't see. */
+export async function reviewAnswer(system: string, context: string, answer: TutorResponse) {
+  const res = await withRetry(() =>
+    client().models.generateContent({
+      model: process.env.GEMINI_SOLVER_MODEL || tutorModel(),
+      contents: [{ role: "user", parts: [{ text: `${context}\n\n<tutor_answer>\n${JSON.stringify(answer.blocks)}\n</tutor_answer>` }] }],
+      config: {
+        systemInstruction: system,
+        responseMimeType: "application/json",
+        responseJsonSchema: {
+          type: "object",
+          properties: { ok: { type: "boolean" }, problems: { type: "array", items: { type: "string" } } },
+          required: ["ok", "problems"],
+        },
+        temperature: 0,
+        thinkingConfig: { thinkingLevel: ThinkingLevel.HIGH },
+      },
+    }),
+  );
+  const parsed = JSON.parse(res.text ?? "{}") as { ok?: boolean; problems?: string[] };
+  const problems = parsed.problems ?? [];
+  return { ok: parsed.ok !== false && problems.length === 0, problems, usage: usageOf(res.usageMetadata) };
+}
+
 function usageOf(meta: { promptTokenCount?: number; candidatesTokenCount?: number; thoughtsTokenCount?: number } | undefined): Usage {
   return {
     inputTokens: meta?.promptTokenCount ?? 0,
@@ -145,7 +211,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
   return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens };
 }
 
-const VISUAL_TYPES = new Set(["frame", "plot", "diagram", "flow"]);
+const VISUAL_TYPES = new Set(["frame", "plot", "diagram", "flow", "transform2d", "plot3d", "vector_field"]);
 
 /** Applies the visual rules the prompt asks for, in case the model ignores them. */
 function enforceRules(response: TutorResponse, hasFrame: boolean, pausedAt: number): TutorResponse {

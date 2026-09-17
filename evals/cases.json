@@ -1,0 +1,114 @@
+[
+  {
+    "id": "la-repeated-eigenvalue",
+    "videoId": "cdZnhQjJu4I",
+    "timestamp": 2950,
+    "question": "why is there only one eigenvector here? what is A actually doing geometrically that kills the second direction?",
+    "reference": "A = [[3,1],[0,3]] has the repeated eigenvalue λ = 3. A − 3I = [[0,1],[0,0]] has rank 1, so its null space (the eigenspace) is 1-dimensional, spanned by (1,0). A repeated eigenvalue does not guarantee two independent eigenvectors. Geometrically A scales by 3 and shears: (x,y) ↦ (3x + y, 3y). Only vectors on the x-axis stay on their own line; any vector with y ≠ 0 gets pushed sideways. Must not confuse the null space of A − 3I with its column space/image.",
+    "preferredVisuals": [
+      "transform2d",
+      "steps"
+    ]
+  },
+  {
+    "id": "la-complex-eigenvector",
+    "videoId": "cdZnhQjJu4I",
+    "timestamp": 2460,
+    "question": "ok but what is the actual eigenvector for lambda = i? and what does a complex eigenvector even mean for a rotation",
+    "reference": "Q = [[0,-1],[1,0]]. For λ = i, (Q − iI)x = 0 gives x = (1, −i) (or any nonzero multiple, e.g. (i, 1)). For λ = −i, x = (1, i). A 90° rotation leaves no real direction on its own line, so there are no real eigenvectors; the complex eigenvalues ±i (modulus 1) encode rotation by 90°.",
+    "preferredVisuals": [
+      "steps",
+      "none",
+      "transform2d"
+    ]
+  },
+  {
+    "id": "la-3x3-tridiagonal",
+    "videoId": "cdZnhQjJu4I",
+    "timestamp": 1605,
+    "question": "for practice: what are the eigenvalues and eigenvectors of [[2,1,0],[1,2,1],[0,1,2]]?",
+    "reference": "Characteristic polynomial (2−λ)[(2−λ)² − 2] = 0. Eigenvalues λ = 2, 2 + √2, 2 − √2. Eigenvectors: λ = 2 → (1, 0, −1); λ = 2 + √2 → (1, √2, 1); λ = 2 − √2 → (1, −√2, 1) (any nonzero multiples). They are orthogonal because A is symmetric; trace 6 = sum of eigenvalues, det 4 = product.",
+    "preferredVisuals": [
+      "steps"
+    ]
+  },
+  {
+    "id": "la-trace-sum",
+    "videoId": "cdZnhQjJu4I",
+    "timestamp": 2005,
+    "question": "why does the trace equal the sum of the eigenvalues? can you show it for a 2x2",
+    "reference": "For A = [[a,b],[c,d]], det(A − λI) = λ² − (a + d)λ + (ad − bc). The eigenvalues are its roots, so it also equals (λ − λ₁)(λ − λ₂) = λ² − (λ₁ + λ₂)λ + λ₁λ₂. Matching coefficients: λ₁ + λ₂ = a + d = trace and λ₁λ₂ = ad − bc = det.",
+    "preferredVisuals": [
+      "steps"
+    ]
+  },
+  {
+    "id": "la-projection-eigenvalues",
+    "videoId": "cdZnhQjJu4I",
+    "timestamp": 640,
+    "question": "why can a projection matrix only have eigenvalues 0 and 1?",
+    "reference": "A projection satisfies P² = P. If Px = λx with x ≠ 0 then P²x = λ²x, but P²x = Px = λx, so λ² = λ and λ ∈ {0, 1}. Vectors already in the plane are unchanged (λ = 1); vectors perpendicular to the plane project to 0 (λ = 0).",
+    "preferredVisuals": [
+      "steps",
+      "none"
+    ]
+  },
+  {
+    "id": "la-sum-of-matrices",
+    "videoId": "cdZnhQjJu4I",
+    "timestamp": 1930,
+    "question": "why can't I just add the eigenvalues of A and B to get the eigenvalues of A + B?",
+    "reference": "Ax = λx and By = αy usually involve different eigenvectors x ≠ y, so (A + B)x = λx + Bx is not a multiple of x in general. The rule λ + α only works when A and B share the eigenvector (e.g. B = 3I, where every vector is an eigenvector). Counterexample: A = [[0,1],[0,0]], B = [[0,0],[1,0]] both have eigenvalues 0, 0 but A + B = [[0,1],[1,0]] has eigenvalues 1 and −1. Same failure for AB.",
+    "preferredVisuals": [
+      "steps",
+      "none",
+      "transform2d"
+    ]
+  },
+  {
+    "id": "mv-gradient-perpendicular",
+    "videoId": "2XraaWefBd8",
+    "timestamp": 930,
+    "question": "i don't get the proof, why does that show the gradient is perpendicular to the level surface?",
+    "reference": "Take any curve r(t) that stays on the level surface w = c. Then w(r(t)) = c for all t, so dw/dt = 0. By the chain rule dw/dt = ∇w · r'(t), so ∇w · v = 0: the gradient is perpendicular to the velocity. Since any vector tangent to the surface is the velocity of some curve on it, ∇w is perpendicular to every tangent vector, i.e. to the tangent plane (it is a normal vector).",
+    "preferredVisuals": [
+      "plot3d",
+      "steps",
+      "vector_field"
+    ]
+  },
+  {
+    "id": "mv-tangent-plane",
+    "videoId": "2XraaWefBd8",
+    "timestamp": 1340,
+    "question": "how did he get 4x + 2y - 2z = 8 for the tangent plane?",
+    "reference": "Surface x² + y² − z² = 4 is the level set w = 4 of w = x² + y² − z². ∇w = ⟨2x, 2y, −2z⟩, which at (2, 1, 1) is ⟨4, 2, −2⟩, a normal vector to the tangent plane. Plane through (2,1,1) with that normal: 4(x − 2) + 2(y − 1) − 2(z − 1) = 0, which simplifies to 4x + 2y − 2z = 8 (check: 8 + 2 − 2 = 8).",
+    "preferredVisuals": [
+      "steps",
+      "plot3d"
+    ]
+  },
+  {
+    "id": "mv-steepest-ascent",
+    "videoId": "2XraaWefBd8",
+    "timestamp": 2650,
+    "question": "why is the directional derivative biggest in the gradient direction, and what is that biggest value?",
+    "reference": "D_u w = ∇w · u = |∇w||u| cos θ = |∇w| cos θ since u is a unit vector. cos θ is largest (= 1) when θ = 0, i.e. u points along ∇w, and the maximum rate is |∇w|. It is smallest (−|∇w|) opposite to ∇w, and 0 when u ⊥ ∇w, i.e. u is tangent to the level curve.",
+    "preferredVisuals": [
+      "plot3d",
+      "steps",
+      "none"
+    ]
+  },
+  {
+    "id": "mv-directional-computation",
+    "videoId": "2XraaWefBd8",
+    "timestamp": 2440,
+    "question": "for practice: w = x^2 y + y^3, what's the directional derivative at (1, 2) in the direction <3, 4>? and the max rate of increase there?",
+    "reference": "∇w = ⟨2xy, x² + 3y²⟩ = ⟨4, 13⟩ at (1, 2). The direction must be normalized: u = ⟨3/5, 4/5⟩. D_u w = 4·3/5 + 13·4/5 = 12/5 + 52/5 = 64/5 = 12.8. Maximum rate of increase is |∇w| = √(16 + 169) = √185 ≈ 13.60, in the direction ⟨4, 13⟩.",
+    "preferredVisuals": [
+      "steps",
+      "plot3d"
+    ]
+  }
+]

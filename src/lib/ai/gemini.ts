@@ -5,8 +5,10 @@ import type { TranscriptLine } from "@/lib/youtube";
 
 const model = () => process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
-// Long videos are indexed in segments so each request stays small and reliable.
-const SEGMENT_SECONDS = 20 * 60;
+// Long videos are indexed in segments so each request stays small and finishes well
+// under server timeouts; a few run at once to stay inside per-minute rate limits.
+const SEGMENT_SECONDS = 10 * 60;
+const SEGMENT_CONCURRENCY = 3;
 
 const responseSchema = {
   type: Type.OBJECT,
@@ -33,7 +35,7 @@ const responseSchema = {
 
 function prompt(hasTranscript: boolean, from: number, to: number) {
   return `You are indexing an educational video so a tutor can later answer student questions about any moment.
-Cover ONLY the range ${from}s to ${to}s. Split it into consecutive chunks of about 30-45 seconds (roughly ${Math.max(1, Math.round((to - from) / 40))} chunks), aligned to natural topic breaks. Do not merge long stretches into one chunk.
+Cover ONLY the range ${from}s to ${to}s. start_seconds and end_seconds are absolute seconds from the start of the video as plain numbers (e.g. 40:30 is 2430, not 4030). Split it into consecutive chunks of about 30-45 seconds (roughly ${Math.max(1, Math.round((to - from) / 40))} chunks), aligned to natural topic breaks. Do not merge long stretches into one chunk.
 
 For each chunk:
 - transcript: ${hasTranscript ? "a brief paraphrase of what is said (the exact captions are stored separately)" : "what is said, as close to verbatim as practical"}
@@ -54,8 +56,7 @@ export async function indexVideo(
   const segments: [number, number][] = [];
   for (let s = 0; s < total; s += SEGMENT_SECONDS) segments.push([s, Math.min(s + SEGMENT_SECONDS, total)]);
 
-  const results = await Promise.all(
-    segments.map(async ([from, to]) => {
+  const results = await mapLimit(segments, SEGMENT_CONCURRENCY, async ([from, to]) => {
       const res = await withRetry(() => ai.models.generateContent({
         model: model(),
         contents: [
@@ -81,13 +82,13 @@ export async function indexVideo(
           thinkingConfig: { thinkingLevel: ThinkingLevel.MINIMAL },
         },
       }));
+      const parsed = videoIndex.parse(JSON.parse(res.text ?? "{}"));
       return {
-        parsed: videoIndex.parse(JSON.parse(res.text ?? "{}")),
+        parsed: { ...parsed, chunks: parsed.chunks.flatMap((c) => fixChunkTimes(c, from, to)) },
         inputTokens: res.usageMetadata?.promptTokenCount ?? 0,
         outputTokens: res.usageMetadata?.candidatesTokenCount ?? 0,
       };
-    }),
-  );
+  });
 
   const chunks = results.flatMap((r) => r.parsed.chunks).sort((a, b) => a.start_seconds - b.start_seconds);
 
@@ -109,3 +110,39 @@ export async function indexVideo(
   };
 }
 
+
+async function mapLimit<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
+  const results: R[] = new Array(items.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < items.length) {
+      const i = next++;
+      results[i] = await fn(items[i]);
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(limit, items.length) }, worker));
+  return results;
+}
+
+type Chunk = VideoIndex["chunks"][number];
+
+/**
+ * Models sometimes write times as mm:ss digits (40:30 → 4030) or relative to the segment.
+ * Repair times that fall outside the segment; drop chunks that can't be placed.
+ */
+function fixChunkTimes(c: Chunk, from: number, to: number): Chunk[] {
+  const inRange = (s: number, e: number) => s >= from - 5 && s < to + 5 && e > s && e <= to + 60;
+  const candidates: [number, number][] = [
+    [c.start_seconds, c.end_seconds],
+    [mmss(c.start_seconds), mmss(c.end_seconds)],
+    [from + c.start_seconds, from + c.end_seconds],
+  ];
+  const fixed = candidates.find(([s, e]) => inRange(s, e));
+  if (!fixed) return [];
+  return [{ ...c, start_seconds: Math.max(from, fixed[0]), end_seconds: Math.min(to, fixed[1]) }];
+}
+
+function mmss(n: number) {
+  const whole = Math.floor(n);
+  return Math.floor(whole / 100) * 60 + (whole % 100);
+}

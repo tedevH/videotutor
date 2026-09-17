@@ -31,9 +31,7 @@ export async function ingestVideo(videoId: string) {
 
   try {
     const { index, inputTokens, outputTokens } = await indexVideo(videoId, duration, transcript);
-    await replaceChunks(
-      videoId,
-      index.chunks.map((c) => ({
+    const visualChunks = index.chunks.map((c) => ({
         video_id: videoId,
         start_seconds: Math.floor(c.start_seconds),
         end_seconds: Math.ceil(c.end_seconds),
@@ -41,8 +39,12 @@ export async function ingestVideo(videoId: string) {
         visual: c.visual,
         on_screen_text: c.on_screen_text,
         concepts: c.concepts,
-      })),
-    );
+      }));
+    // Keep caption-only notes for any stretch the visual pass skipped, so no moment is blank.
+    const covered = (start: number, end: number) =>
+      visualChunks.some((v) => v.start_seconds < end && v.end_seconds > start);
+    const fillers = transcript ? captionChunks(videoId, transcript).filter((c) => !covered(c.start_seconds, c.end_seconds)) : [];
+    await replaceChunks(videoId, [...visualChunks, ...fillers].sort((a, b) => a.start_seconds - b.start_seconds));
     await db.from("videos").update({ index_status: "ready", summary: index.summary }).eq("id", videoId);
     await db.from("usage_events").insert({
       kind: "ingest",

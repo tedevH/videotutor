@@ -373,10 +373,24 @@ function TutorMessage({ message, onRewatch }: { message: StoredMessage; onRewatc
   );
 }
 
+const THINKING_STAGES = [
+  { after: 0, text: "Looking at this moment" },
+  { after: 8, text: "Working it out" },
+  { after: 20, text: "Checking the math (harder questions take up to a minute)" },
+  { after: 60, text: "Still checking, almost there" },
+];
+
 function Thinking() {
+  const [seconds, setSeconds] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setSeconds((s) => s + 1), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const stage = [...THINKING_STAGES].reverse().find((s) => seconds >= s.after)!;
+
   return (
     <div className="flex items-center gap-2 text-sm text-muted">
-      <span>Thinking & sketching</span>
+      <span>{stage.text}</span>
       <span className="flex gap-1">
         {[0, 1, 2].map((i) => (
           <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" style={{ animationDelay: `${i * 150}ms` }} />

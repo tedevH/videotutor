@@ -33,10 +33,33 @@ const sample = tutorResponse.parse({
 });
 
 /** Renders a sample tutor answer so diagram work doesn't need API keys. Dev only. */
+const advanced = tutorResponse.parse({
+  misconception: "",
+  rewatch_from: null,
+  blocks: [
+    {
+      type: "steps",
+      title: "Eigenvectors of A = [[3,1],[0,3]]",
+      steps: [
+        { math: "\\det(A-\\lambda I) = (3-\\lambda)^2 = 0", note: "triangular, so multiply the diagonal" },
+        { math: "\\lambda_1 = \\lambda_2 = 3", note: "one repeated eigenvalue" },
+        { math: "A - 3I = \\begin{bmatrix}0&1\\\\0&0\\end{bmatrix}", note: "rank 1, so the null space is 1-dimensional" },
+        { math: "x = \\begin{bmatrix}1\\\\0\\end{bmatrix}", note: "only one independent eigenvector" },
+      ],
+    },
+    { type: "transform2d", title: "A shears the plane", matrix: [[3, 1], [0, 3]], vectors: [{ x: 0, y: 1, label: "not an eigenvector" }], show_eigenvectors: true },
+    { type: "plot3d", title: "Saddle z = x² − y²", z: "x^2 - y^2", xDomain: [-2, 2], yDomain: [-2, 2], view: "surface", points: [{ x: 0, y: 0, label: "saddle point" }], gradients_at: [], tangent_plane_at: { x: 1, y: 0.5 } },
+    { type: "plot3d", title: "Level curves and the gradient", z: "x^2 + 2*y^2", xDomain: [-2, 2], yDomain: [-2, 2], view: "contour", points: [{ x: 1, y: 1, label: "(1, 1)" }], gradients_at: [{ x: 1, y: 1 }], tangent_plane_at: null },
+    { type: "vector_field", title: "F = (−y, x) circulates", fx: "-y", fy: "x", xDomain: [-3, 3], yDomain: [-3, 3], curve: { x: "2*cos(t)", y: "2*sin(t)", t: [0, 6.283] } },
+  ],
+});
+
 export default function DevPreview() {
   if (process.env.NODE_ENV === "production") notFound();
   return (
     <main className="mx-auto w-full max-w-[480px] p-4">
+      <TutorBlocks blocks={advanced.blocks} />
+      <hr className="my-8" />
       <TutorBlocks blocks={sample.blocks} />
     </main>
   );
