@@ -1,6 +1,6 @@
 import { after, NextResponse } from "next/server";
 import { processAssignment } from "@/lib/homework/build";
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 300;
 
@@ -23,10 +23,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const pages = (body.pages ?? []).filter((p) => p.imagePath?.startsWith(`${user.id}/`) && Number.isFinite(p.pageNumber));
   if (!pages.length) return NextResponse.json({ error: "No pages to add" }, { status: 400 });
 
+  // RLS already limits this to the student's own assignment; page rows are then written server-side.
   const { data: assignment } = await supabase.from("assignments").select("id").eq("id", id).maybeSingle();
   if (!assignment) return NextResponse.json({ error: "Assignment not found" }, { status: 404 });
 
-  const { error } = await supabase.from("assignment_pages").upsert(
+  const { error } = await createAdminClient().from("assignment_pages").upsert(
     pages.map((p) => ({
       assignment_id: id,
       user_id: user.id,
