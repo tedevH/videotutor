@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AddVideoForm } from "@/components/add-video-form";
 import { DemoVideo } from "@/components/landing/demo-video";
 import { StaticDiagrams } from "@/components/landing/static-diagrams";
+import { CollegeIllustration, ExamIllustration, HighSchoolIllustration } from "@/components/landing/student-illustrations";
 import { createClient } from "@/lib/supabase/server";
 
 const UNIVERSITIES = ["Stanford", "UC Berkeley", "Cornell", "Emory", "UC Davis", "MIT", "UCLA", "Harvard", "Yale", "Georgia Tech"];
@@ -206,29 +207,40 @@ export default async function Home() {
 
       {/* students */}
       <section className="mx-auto mt-28 w-full max-w-6xl px-4 sm:px-6">
-        <div className="rounded-3xl border border-ink/10 bg-white px-6 py-12 sm:px-12 sm:py-16">
-          <h2 className="max-w-2xl text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Built for students who learn from video.</h2>
-          <div className="mt-12 grid gap-10 md:grid-cols-3">
-            {[
-              {
-                who: "High school",
-                body: "AP Calc, AP Bio, AP Chem and SAT review videos. Ask the question you'd feel awkward raising in class.",
-              },
-              {
-                who: "College",
-                body: "Recorded lectures, problem-set walkthroughs, and the 2 a.m. study session when office hours are long over.",
-              },
-              {
-                who: "Exam season",
-                body: "Every question you ask is saved with its timestamp and diagram, so your confusions turn into a review sheet.",
-              },
-            ].map((c) => (
-              <div key={c.who}>
-                <p className="text-lg font-semibold text-pen">{c.who}</p>
-                <p className="mt-2 leading-relaxed text-ink/75">{c.body}</p>
-              </div>
-            ))}
-          </div>
+        <h2 className="max-w-2xl text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Built for students who learn from video.</h2>
+        <div className="mt-10 grid gap-5 md:grid-cols-3">
+          {[
+            {
+              who: "High school",
+              body: "AP Calc, AP Bio, AP Chem and SAT review videos. Ask the question you'd feel awkward raising in class.",
+              art: <HighSchoolIllustration />,
+              tint: "bg-[#fff1b8]",
+              tilt: "md:-rotate-1",
+            },
+            {
+              who: "College",
+              body: "Recorded lectures, problem-set walkthroughs, and the 2 a.m. study session when office hours are long over.",
+              art: <CollegeIllustration />,
+              tint: "bg-[#dfe8ff]",
+              tilt: "md:translate-y-4",
+            },
+            {
+              who: "Exam season",
+              body: "Every question you ask is saved with its timestamp and diagram, so your confusions turn into a review sheet.",
+              art: <ExamIllustration />,
+              tint: "bg-[#ffe1d2]",
+              tilt: "md:rotate-1",
+            },
+          ].map((c) => (
+            <article
+              key={c.who}
+              className={`${c.tint} ${c.tilt} rounded-3xl border-2 border-ink p-5 shadow-[6px_6px_0_#1c1b19] transition-transform hover:-translate-y-1 sm:p-6`}
+            >
+              <div className="rounded-2xl bg-white/60 p-3">{c.art}</div>
+              <h3 className="mt-5 text-xl font-semibold">{c.who}</h3>
+              <p className="mt-2 leading-relaxed text-ink/80">{c.body}</p>
+            </article>
+          ))}
         </div>
       </section>
 
