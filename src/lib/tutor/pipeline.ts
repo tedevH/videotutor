@@ -23,6 +23,10 @@ export type TutorInput = {
   mode?: "socratic" | "direct";
   /** Loads the student-model summary once the subject is known. */
   studentModel?: (subject: string) => Promise<string>;
+  /** Code-checked solving and review for hard questions (paid plans). */
+  verifiedMath?: boolean;
+  /** Stronger model for the answer pass (Pro). */
+  tutorModel?: string;
   /** Present when the student is answering Lumo's question: skip re-watching and re-solving. */
   followUp?: NonNullable<TutorResponse["context_cache"]> | null;
 };
@@ -84,7 +88,8 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
 
   let usage: Usage = look?.usage ?? { inputTokens: 0, outputTokens: 0 };
   let verifiedWork: string | null = reuse?.verified_work ?? null;
-  const hard = reuse ? reuse.level === "advanced" || !!reuse.verified_work : !!look && needsSolving(look.moment);
+  const hard =
+    input.verifiedMath !== false && (reuse ? reuse.level === "advanced" || !!reuse.verified_work : !!look && needsSolving(look.moment));
   if (hard && !reuse) {
     const solved = await solveWithCode(SOLVER_PROMPT, contextFor(null)).catch((err) => {
       console.error("solve pass failed", err);
@@ -102,6 +107,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
     frameJpeg: input.frameJpeg,
     drawingPng: input.drawingPng ?? null,
     question: input.question,
+    model: input.tutorModel,
     timestamp: input.timestamp,
     // Without checked work, a hard question at least gets careful reasoning.
     thinking,
@@ -127,6 +133,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
           frameJpeg: input.frameJpeg,
           drawingPng: input.drawingPng ?? null,
           question: input.question,
+          model: input.tutorModel,
           timestamp: input.timestamp,
           thinking: ThinkingLevel.MEDIUM,
         }).catch((err) => {

@@ -42,7 +42,7 @@ Each case uses about 5 Gemini requests. Detailed results are written to `evals/r
 
 ## Setup
 
-1. Create a [Supabase](https://supabase.com) project, then run every file in `supabase/migrations/` in order (0001 → 0005) in the SQL editor.
+1. Create a [Supabase](https://supabase.com) project, then run every file in `supabase/migrations/` in order (0001 → 0006) in the SQL editor.
 2. In Supabase → Authentication: enable **Email** (and optionally **Google**, then set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`), and add `http://localhost:3000/auth/callback` to the redirect URLs.
 3. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 4. Copy `.env.example` to `.env.local` and fill it in.
@@ -70,7 +70,7 @@ Everything else (other hosts, http, IP addresses, credentials in URLs, shortener
 ## Billing (Stripe)
 
 1. Add `STRIPE_SECRET_KEY` (start with a `sk_test_` key) and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to `.env.local`.
-2. `npm run stripe:setup` creates the Pro product with monthly ($9) and yearly ($72) prices, found later by lookup key.
+2. `npm run stripe:setup` creates LumoTutor Plus ($9.99/mo, $79.99/yr) and Pro ($19.99/mo, $159.99/yr), found later by lookup key.
 3. Webhooks: locally run `stripe listen --forward-to localhost:3000/api/stripe/webhook` and put the printed `whsec_` secret in `STRIPE_WEBHOOK_SECRET`. In production, add an endpoint for `https://<your-domain>/api/stripe/webhook` with events `checkout.session.completed` and `customer.subscription.created/updated/deleted`.
 4. In the Stripe Dashboard, save the Customer Portal settings once (required before "Manage billing" works).
 

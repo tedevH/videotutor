@@ -29,6 +29,7 @@ export function WatchView(props: {
   initialStatus: string;
   startAt: number;
   initialMode: "socratic" | "direct";
+  voiceAllowed: boolean;
   initialMessages: StoredMessage[];
 }) {
   const player = useRef<PlayerHandle>(null);
@@ -415,7 +416,14 @@ export function WatchView(props: {
             />
             {speech.supported && (
               <button
-                onClick={() => (speech.listening ? speech.stop() : speech.start())}
+                onClick={() => {
+                  if (!props.voiceAllowed) {
+                    setError({ message: "Voice tutoring is part of LumoTutor Plus.", upgrade: true });
+                    return;
+                  }
+                  if (speech.listening) speech.stop();
+                  else speech.start();
+                }}
                 aria-label={speech.listening ? "Stop listening" : "Ask out loud"}
                 title="Ask out loud: the video pauses when you start talking"
                 className={`h-[44px] w-[44px] shrink-0 rounded-xl border text-lg ${speech.listening ? "animate-pulse border-red-400 bg-red-50" : "border-line hover:bg-stone-50"}`}

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { chooseConcept, createNextItem, ensureConceptByName, publicItem, takePreparedItem } from "@/lib/practice/engine";
+import { planFor } from "@/lib/entitlements";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 
 export const maxDuration = 300;
@@ -20,11 +21,29 @@ export async function POST(request: Request) {
   conceptId = (await chooseConcept(user.id, { conceptId, courseId: body.courseId, review: body.review })) ?? undefined;
   if (!conceptId) return NextResponse.json({ error: "Tell Lumo what to practice, or ask a few questions in a video first." }, { status: 400 });
 
-  const { data: concept } = await createAdminClient().from("concepts").select("name").eq("id", conceptId).eq("user_id", user.id).maybeSingle();
+  const db = createAdminClient();
+  const [{ plan, limits }, { count: todayCount }] = await Promise.all([
+    planFor(user.id),
+    db.from("practice_items").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", new Date(Date.now() - 86_400_000).toISOString()),
+  ]);
+  const { data: concept } = await db.from("concepts").select("name").eq("id", conceptId).eq("user_id", user.id).maybeSingle();
   if (!concept) return NextResponse.json({ error: "Concept not found" }, { status: 404 });
 
   try {
-    const item = (await takePreparedItem(user.id, conceptId)) ?? (await createNextItem(user.id, conceptId));
+    const prepared = await takePreparedItem(user.id, conceptId);
+    if (!prepared && (todayCount ?? 0) >= limits.practiceProblemsPerDay) {
+      return NextResponse.json(
+        {
+          error:
+            plan === "free"
+              ? `The Free plan includes ${limits.practiceProblemsPerDay} practice problems a day. Plus includes 60, or invite 2 friends to unlock 14 days of Plus.`
+              : `You've done ${limits.practiceProblemsPerDay} problems today. Nice work! More tomorrow.`,
+          upgrade: plan !== "pro",
+        },
+        { status: 429 },
+      );
+    }
+    const item = prepared ?? (await createNextItem(user.id, conceptId));
     return NextResponse.json({ item: publicItem(item, concept.name) });
   } catch (err) {
     console.error("practice generation failed", err);

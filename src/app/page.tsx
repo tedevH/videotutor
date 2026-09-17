@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AddVideoForm } from "@/components/add-video-form";
 import { PricingCards } from "@/components/pricing-cards";
 import { DemoVideo } from "@/components/landing/demo-video";
+import { FeatureGrid } from "@/components/landing/feature-grid";
 import { StaticDiagrams } from "@/components/landing/static-diagrams";
 import { SubjectFlashcards } from "@/components/landing/subject-flashcards";
 import { CollegeIllustration, ExamIllustration, HighSchoolIllustration } from "@/components/landing/student-illustrations";
@@ -49,7 +50,7 @@ const FAQS = [
   },
   {
     q: "Is it free?",
-    a: "The Free plan gives you 15 questions a day with every kind of explanation. Pro ($9/month, or $72/year) raises that to 200 a day for heavy courses and exam season. Cancel anytime.",
+    a: "Yes, the Free plan includes 2 lectures a month, a basic tutor and 5 practice problems a day. Plus ($9.99/month or $79.99/year) unlocks 25 hours of lectures, voice tutoring, diagrams, adaptive practice, memory and exam prep. Pro ($19.99/month) is for heavy course loads. Invite 2 friends and you get 14 days of Plus free.",
   },
   {
     q: "Who can see my questions?",
@@ -72,8 +73,8 @@ export default async function Home() {
           LumoTutor
         </Link>
         <nav className="flex items-center gap-5 text-sm">
-          <a href="#how" className="hidden hover:underline sm:inline">
-            How it works
+          <a href="#features" className="hidden hover:underline sm:inline">
+            Features
           </a>
           <a href="#subjects" className="hidden hover:underline sm:inline">
             Subjects
@@ -103,8 +104,7 @@ export default async function Home() {
           </div>
           <div className="lg:pb-3">
             <p className="text-lg leading-relaxed text-ink/80">
-              Paste any lecture from YouTube, Vimeo or your university. When something doesn&apos;t click, start typing. The video stops, and a tutor that watched the same
-              minute you did explains it, drawing right on the frame you&apos;re stuck on.
+              Paste any lecture. When something doesn&apos;t click, start typing or just ask out loud. Lumo pauses the video, explains that exact moment with a diagram, checks you&apos;ve got it, and remembers what you struggle with all semester.
             </p>
             <div className="mt-6">
               <AddVideoForm signedIn={false} />
@@ -167,6 +167,16 @@ export default async function Home() {
             </li>
           ))}
         </ol>
+      </section>
+
+      {/* features */}
+      <section id="features" className="mx-auto mt-28 w-full max-w-6xl scroll-mt-10 px-4 sm:px-6">
+        <p className="text-sm font-semibold text-pen">More than answers</p>
+        <h2 className="mt-2 max-w-3xl text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">A teacher that keeps learning about you.</h2>
+        <p className="mt-3 max-w-2xl text-lg text-ink/70">Lumo watches with you, figures out why you&apos;re stuck, teaches it the way that works for you, and remembers it all semester.</p>
+        <div className="mt-10">
+          <FeatureGrid />
+        </div>
       </section>
 
       {/* static diagrams */}
@@ -232,10 +242,15 @@ export default async function Home() {
 
       {/* pricing */}
       <section id="pricing" className="mx-auto mt-28 w-full max-w-6xl scroll-mt-10 px-4 sm:px-6">
-        <h2 className="text-center text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Start free. Go Pro for hard courses.</h2>
+        <p className="text-center text-sm font-semibold text-pen">LumoTutor Plus · $9.99/month</p>
+        <h2 className="mt-2 text-center text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Your personal AI teacher for every class.</h2>
         <div className="mt-10">
           <PricingCards signedIn={false} currentPlan={null} />
         </div>
+        <p className="mx-auto mt-10 max-w-xl rounded-2xl border-2 border-dashed border-pen/40 bg-[#fff7ef] px-5 py-4 text-center">
+          <span className="font-semibold">Invite 2 friends, unlock 14 days of Plus.</span>{" "}
+          <span className="text-ink/70">Share your link in your class group chat once you sign up.</span>
+        </p>
       </section>
 
       {/* faq */}

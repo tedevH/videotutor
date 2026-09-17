@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import type { BillingInterval } from "@/lib/plans";
+import type { BillingInterval, PaidPlanId } from "@/lib/plans";
 
 async function redirectTo(endpoint: string, body: object, onError: (msg: string) => void) {
   const res = await fetch(endpoint, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -16,7 +16,19 @@ async function redirectTo(endpoint: string, body: object, onError: (msg: string)
   return true;
 }
 
-export function UpgradeButton({ interval, signedIn, className, children }: { interval: BillingInterval; signedIn: boolean; className?: string; children: React.ReactNode }) {
+export function UpgradeButton({
+  plan,
+  interval,
+  signedIn,
+  className,
+  children,
+}: {
+  plan: PaidPlanId;
+  interval: BillingInterval;
+  signedIn: boolean;
+  className?: string;
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -29,7 +41,7 @@ export function UpgradeButton({ interval, signedIn, className, children }: { int
           if (!signedIn) return router.push("/login?next=/pricing");
           setLoading(true);
           setError(null);
-          const handled = await redirectTo("/api/billing/checkout", { interval }, setError);
+          const handled = await redirectTo("/api/billing/checkout", { plan, interval }, setError);
           if (!handled) router.push("/login?next=/pricing");
           setLoading(false);
         }}

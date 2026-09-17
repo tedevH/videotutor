@@ -1,3 +1,4 @@
+import { lectureAllowanceError, planFor } from "@/lib/entitlements";
 import { createAdminClient } from "@/lib/supabase/server";
 import { fetchSourceMeta, resolveVideoUrl } from "@/lib/video-sources";
 import type { SupabaseClient } from "@supabase/supabase-js";
@@ -16,6 +17,12 @@ export async function addVideo(
   if ("error" in resolved) return { error: resolved.error, status: 400 };
 
   const db = createAdminClient();
+  const { data: alreadyAdded } = await db.from("sessions").select("id").eq("user_id", userId).eq("video_id", resolved.id).maybeSingle();
+  if (!alreadyAdded) {
+    const { plan } = await planFor(userId);
+    const limitError = await lectureAllowanceError(userId, plan);
+    if (limitError) return { error: limitError, status: 402 };
+  }
   const { data: existing } = await db.from("videos").select("id, index_status").eq("id", resolved.id).maybeSingle();
   if (!existing) {
     const meta = await fetchSourceMeta(resolved).catch(() => null);

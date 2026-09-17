@@ -128,9 +128,9 @@ export async function solveWithCode(system: string, context: string) {
 /** Pass 3: answer the question, grounded in the earlier passes and (when captured) the exact frame. */
 export async function askTutor(
   system: string,
-  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel; drawingPng?: string | null; question?: string },
+  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel; drawingPng?: string | null; question?: string; model?: string },
 ): Promise<{ response: TutorResponse; model: string; usage: Usage }> {
-  const model = tutorModel();
+  const model = input.model || tutorModel();
   const parts: Part[] = [{ text: input.context }];
   if (input.frameJpeg) parts.push({ text: "<paused_frame>" }, framePart(input.frameJpeg), { text: "</paused_frame>" });
   if (input.drawingPng) {

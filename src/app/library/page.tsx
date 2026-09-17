@@ -3,6 +3,7 @@ import { AddVideoForm } from "@/components/add-video-form";
 import { ManageBillingButton } from "@/components/billing-buttons";
 import { AppNav } from "@/components/app-nav";
 import { syncSubscriptionFromStripe } from "@/lib/billing";
+import { effectivePlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 import { formatTime } from "@/lib/youtube";
 
@@ -12,13 +13,14 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  let { data: profile } = await supabase.from("profiles").select("plan, stripe_customer_id").eq("id", user!.id).maybeSingle();
+  let { data: profile } = await supabase.from("profiles").select("plan, stripe_customer_id, plus_trial_until").eq("id", user!.id).maybeSingle();
   // Back from checkout: confirm with Stripe directly instead of waiting for the webhook.
-  if (upgraded && profile?.stripe_customer_id && profile.plan !== "pro") {
+  if (upgraded && profile?.stripe_customer_id && effectivePlan(profile) === "free") {
     await syncSubscriptionFromStripe(user!.id, profile.stripe_customer_id).catch((err) => console.error("subscription sync failed", err));
-    ({ data: profile } = await supabase.from("profiles").select("plan, stripe_customer_id").eq("id", user!.id).maybeSingle());
+    ({ data: profile } = await supabase.from("profiles").select("plan, stripe_customer_id, plus_trial_until").eq("id", user!.id).maybeSingle());
   }
-  const isPro = profile?.plan === "pro";
+  const plan = effectivePlan(profile);
+  const isPro = plan !== "free";
   const { data: sessions } = await supabase
     .from("sessions")
     .select("id, last_position, updated_at, video_id, videos(title, channel, duration_seconds, provider, thumbnail_url), messages(count)")
@@ -31,7 +33,7 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
       <AppNav current="/library" />
       <div className="mt-4 flex items-center justify-end gap-3 text-sm">
         {isPro ? (
-          <span className="rounded-full bg-[#fff1b8] px-3 py-1 font-semibold">Pro</span>
+          <span className="rounded-full bg-[#fff1b8] px-3 py-1 font-semibold">{plan === "pro" ? "Pro" : "Plus"}</span>
         ) : (
           <Link href="/pricing" className="rounded-full bg-ink px-3 py-1.5 font-medium text-white hover:bg-ink/85">
             Upgrade
@@ -42,7 +44,7 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
 
       {upgraded && (
         <p className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
-          {isPro ? "You're on Pro. Thanks for supporting LumoTutor!" : "Payment received. Your Pro plan will activate in a few seconds; refresh if it doesn't."}
+          {isPro ? `You're on ${plan === "pro" ? "Pro" : "Plus"}. Thanks for supporting LumoTutor!` : "Payment received. Your plan will activate in a few seconds; refresh if it doesn't."}
         </p>
       )}
 

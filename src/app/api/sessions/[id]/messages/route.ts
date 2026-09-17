@@ -3,7 +3,8 @@ import { lastTutorReply, learnFromTurn } from "@/lib/brain/observe";
 import { studentModelSummary } from "@/lib/brain/profile";
 import { signFrameUrls, uploadFrame } from "@/lib/frames";
 import { mediaForVideo, VIDEO_MEDIA_COLUMNS, type VideoRow } from "@/lib/media";
-import { questionsPerDay } from "@/lib/plans";
+import { planFor } from "@/lib/entitlements";
+import { PLANS } from "@/lib/plans";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { runTutor } from "@/lib/tutor/pipeline";
 import { summarizeHistory, type ChunkRow } from "@/lib/tutor/prompt";
@@ -50,8 +51,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const videoRow = session.videos as unknown as VideoRow | null;
   const db = createAdminClient();
-  const [{ data: profile }, { count: usedToday }] = await Promise.all([
-    supabase.from("profiles").select("school_level, plan").eq("id", user.id).single(),
+  const [entitlement, { count: usedToday }] = await Promise.all([
+    planFor(user.id),
     db
       .from("usage_events")
       .select("id", { count: "exact", head: true })
@@ -59,15 +60,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .eq("kind", "tutor")
       .gte("created_at", new Date(Date.now() - 86_400_000).toISOString()),
   ]);
-  const limit = questionsPerDay(profile?.plan);
+  const limit = entitlement.limits.tutorQuestionsPerDay;
   if ((usedToday ?? 0) >= limit) {
     return NextResponse.json(
       {
         error:
-          profile?.plan === "pro"
-            ? `You've asked ${limit} questions today. The limit resets in 24 hours.`
-            : `You've used today's ${limit} free questions. Upgrade to Pro for ${questionsPerDay("pro")} a day.`,
-        upgrade: profile?.plan !== "pro",
+          entitlement.plan === "free"
+            ? `You've used today's ${limit} free questions. Plus includes ${PLANS.plus.limits.tutorQuestionsPerDay} a day, or invite 2 friends to unlock 14 days of Plus.`
+            : `You've asked ${limit} questions today. The limit resets in 24 hours.`,
+        upgrade: entitlement.plan !== "pro",
       },
       { status: 429 },
     );
@@ -132,7 +133,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       index_status: "ready",
     },
     chunks: (chunks ?? []) as ChunkRow[],
-    studentLevel: profile?.school_level ?? "college",
+    studentLevel: entitlement.schoolLevel,
+    verifiedMath: entitlement.limits.verifiedMath,
+    tutorModel: entitlement.limits.bestModels ? process.env.GEMINI_PRO_TUTOR_MODEL || "gemini-3.5-flash" : undefined,
     conversation: summarizeHistory((history ?? []).reverse()),
     mode: session.mode === "direct" ? "direct" : "socratic",
     studentModel: (subject) => studentModelSummary(user.id, subject),

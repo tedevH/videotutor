@@ -1,4 +1,5 @@
 import { notFound, redirect } from "next/navigation";
+import { planFor } from "@/lib/entitlements";
 import { signFrameUrls } from "@/lib/frames";
 import { createClient } from "@/lib/supabase/server";
 import type { StoredMessage } from "@/lib/tutor/schema";
@@ -20,6 +21,8 @@ export default async function WatchPage({ params, searchParams }: PageProps<"/wa
   // Whiteboard sessions have no video.
   if (!session.video_id) redirect(`/board/${session.id}`);
 
+  const { data: auth } = await supabase.auth.getUser();
+  const entitlement = auth.user ? await planFor(auth.user.id) : null;
   const { data: messages } = await supabase
     .from("messages")
     .select("id, role, video_timestamp, content, created_at")
@@ -45,6 +48,7 @@ export default async function WatchPage({ params, searchParams }: PageProps<"/wa
       initialStatus={video.index_status}
       startAt={jumpTo ?? session.last_position}
       initialMode={session.mode === "direct" ? "direct" : "socratic"}
+      voiceAllowed={!!entitlement?.limits.voice}
       initialMessages={(await signFrameUrls((messages ?? []) as StoredMessage[])) as StoredMessage[]}
     />
   );

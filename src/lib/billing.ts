@@ -1,4 +1,5 @@
 import type Stripe from "stripe";
+import { planForLookupKey } from "@/lib/plans";
 import { stripe } from "@/lib/stripe";
 import { createAdminClient } from "@/lib/supabase/server";
 
@@ -11,7 +12,7 @@ export async function applySubscription(sub: Stripe.Subscription, userIdHint: st
   const item = sub.items.data[0];
   const update = {
     stripe_customer_id: customerId,
-    plan: ACTIVE.has(sub.status) ? "pro" : "free",
+    plan: ACTIVE.has(sub.status) ? planForLookupKey(item?.price.lookup_key) : "free",
     plan_status: sub.status,
     plan_interval: item?.price.recurring?.interval === "year" ? "year" : "month",
     current_period_end: item?.current_period_end ? new Date(item.current_period_end * 1000).toISOString() : null,

@@ -2,6 +2,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddVideoForm } from "@/components/add-video-form";
 import { AppNav } from "@/components/app-nav";
+import { InviteFriends } from "@/components/invite-friends";
+import { syncSubscriptionFromStripe } from "@/lib/billing";
+import { effectivePlan } from "@/lib/entitlements";
 import { dueReviews } from "@/lib/brain/review";
 import { listConceptsWithMastery } from "@/lib/brain/store";
 import { createClient } from "@/lib/supabase/server";
@@ -9,7 +12,8 @@ import { formatTime } from "@/lib/youtube";
 
 export const metadata = { title: "Home · LumoTutor" };
 
-export default async function HomePage() {
+export default async function HomePage({ searchParams }: PageProps<"/home">) {
+  const { upgraded } = await searchParams;
   const supabase = await createClient();
   const {
     data: { user },
@@ -18,7 +22,7 @@ export default async function HomePage() {
 
   const [concepts, { data: profile }, { data: sessions }, { data: courses }, { data: misconceptions }] = await Promise.all([
     listConceptsWithMastery(user.id).catch(() => []),
-    supabase.from("profiles").select("name, plan").eq("id", user.id).maybeSingle(),
+    supabase.from("profiles").select("name, plan, plus_trial_until, stripe_customer_id").eq("id", user.id).maybeSingle(),
     supabase
       .from("sessions")
       .select("id, last_position, video_id, videos(title, duration_seconds, thumbnail_url, provider)")
@@ -29,6 +33,13 @@ export default async function HomePage() {
     supabase.from("misconceptions").select("id, description, occurrences, concept_id").is("resolved_at", null).order("occurrences", { ascending: false }).limit(3),
   ]);
 
+  let plan = effectivePlan(profile);
+  // Back from checkout: confirm with Stripe directly instead of waiting for the webhook.
+  if (upgraded && profile?.stripe_customer_id && plan === "free") {
+    await syncSubscriptionFromStripe(user.id, profile.stripe_customer_id).catch((err) => console.error("subscription sync failed", err));
+    const { data: fresh } = await supabase.from("profiles").select("plan, plus_trial_until").eq("id", user.id).maybeSingle();
+    plan = effectivePlan(fresh);
+  }
   const reviews = dueReviews(concepts);
   const weak = concepts.filter((c) => c.level === "shaky").sort((a, b) => b.exam_weight - a.exam_weight).slice(0, 5);
   const hour = new Date().getHours();
@@ -44,6 +55,11 @@ export default async function HomePage() {
       <div className="mx-auto w-full max-w-6xl px-4 py-6">
         <AppNav current="/home" />
 
+        {upgraded && (
+          <p className="mt-6 rounded-xl border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-900">
+            {plan !== "free" ? `Welcome to LumoTutor ${plan === "pro" ? "Pro" : "Plus"}! Everything is unlocked.` : "Payment received. Your plan will activate in a few seconds; refresh if it doesn't."}
+          </p>
+        )}
         <section className="mt-8">
           <h1 className="text-3xl font-semibold tracking-tight sm:text-4xl">
             {greeting}
@@ -122,6 +138,20 @@ export default async function HomePage() {
           </div>
 
           <aside className="space-y-5">
+            <div className="flex items-center justify-between rounded-2xl border border-ink/10 bg-white px-4 py-3 text-sm">
+              <span>
+                Plan: <span className="font-semibold">{plan === "pro" ? "Pro" : plan === "plus" ? "Plus" : "Free"}</span>
+                {plan === "plus" && profile?.plan !== "plus" && profile?.plus_trial_until && (
+                  <span className="text-muted"> · free until {new Date(profile.plus_trial_until).toLocaleDateString(undefined, { month: "short", day: "numeric" })}</span>
+                )}
+              </span>
+              {plan !== "pro" && (
+                <Link href="/pricing" className="font-medium text-pen">
+                  {plan === "free" ? "Upgrade →" : "See Pro →"}
+                </Link>
+              )}
+            </div>
+            {plan === "free" || (profile?.plan !== "plus" && profile?.plan !== "pro") ? <InviteFriends compact /> : null}
             <section className="rounded-3xl border border-ink/10 bg-white p-5">
               <div className="flex items-center justify-between">
                 <h2 className="text-lg font-semibold">Courses</h2>
