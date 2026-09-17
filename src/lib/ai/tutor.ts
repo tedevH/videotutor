@@ -1,6 +1,7 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel, type Part } from "@google/genai";
 import { groundFrameBlock } from "@/lib/ai/ground";
 import { withRetry } from "@/lib/ai/retry";
+import type { Media } from "@/lib/media";
 import { momentJsonSchema, tutorJsonSchema } from "@/lib/tutor/json-schema";
 import { moment, tutorResponse, type Moment, type TutorResponse } from "@/lib/tutor/schema";
 
@@ -12,8 +13,8 @@ const tutorModel = () => process.env.GEMINI_TUTOR_MODEL || process.env.GEMINI_MO
 
 export type Usage = { inputTokens: number; outputTokens: number };
 
-const clipPart = (videoId: string, t: number): Part => ({
-  fileData: { fileUri: `https://www.youtube.com/watch?v=${videoId}`, mimeType: "video/*" },
+const clipPart = (media: Media, t: number): Part => ({
+  fileData: media,
   videoMetadata: { startOffset: `${Math.max(0, t - CLIP_BEFORE_SECONDS)}s`, endOffset: `${t + 1}s`, fps: 1 },
   mediaResolution: { level: PartMediaResolutionLevel.MEDIA_RESOLUTION_LOW },
 });
@@ -27,12 +28,34 @@ const framePart = (jpeg: string): Part => ({
  * Pass 1: look at the moment of the pause and size up the question. Asked on its own, the model
  * describes the screen precisely; buried inside the full tutoring prompt it tends to skim the video.
  */
-export async function lookAtMoment(videoId: string, timestamp: number, frameJpeg: string | null, question: string) {
+export type LiveContext = {
+  /** Captions the browser saw during playback, most recent last. */
+  captions: string;
+  /** Frames captured every few seconds before the pause, oldest first. */
+  recentFrames: string[];
+};
+
+export async function lookAtMoment(
+  media: Media | null,
+  timestamp: number,
+  frameJpeg: string | null,
+  question: string,
+  live: LiveContext | null,
+) {
   const t = Math.floor(timestamp);
-  const parts: Part[] = [clipPart(videoId, t)];
+  const parts: Part[] = [];
+  if (media) {
+    parts.push(clipPart(media, t));
+  } else {
+    // No direct access to the video: use what played in the student's browser.
+    for (const [i, jpeg] of (live?.recentFrames ?? []).entries()) {
+      parts.push({ text: `Frame ${i + 1} (older to newer):` }, { inlineData: { mimeType: "image/jpeg", data: jpeg } });
+    }
+    parts.push({ text: `Captions from the last few minutes of playback:\n${live?.captions || "(no captions available)"}` });
+  }
   if (frameJpeg) parts.push({ text: "Exact frame at the pause:" }, framePart(frameJpeg));
   parts.push({
-    text: `This clip ends at the moment a student paused the video and asked: "${question}"
+    text: `${media ? "This clip ends" : "The frames and captions above end"} at the moment a student paused the video and asked: "${question}"
 
 Report as JSON:
 - on_screen: precisely everything visible in the final second${frameJpeg ? " (the exact frame is attached)" : ""}: every graph (axes, tick values, curves and their equations, shaded regions and colors, marked points), diagram (parts, arrows, labels, how they connect), equations and matrices exactly as written (LaTeX), code, board work, and where each thing is. "speaker only" if nothing instructional is visible.

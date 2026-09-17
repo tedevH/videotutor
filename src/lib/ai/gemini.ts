@@ -1,6 +1,7 @@
 import { GoogleGenAI, MediaResolution, ThinkingLevel, Type } from "@google/genai";
 import { withRetry } from "@/lib/ai/retry";
 import { videoIndex, type VideoIndex } from "@/lib/tutor/schema";
+import type { Media } from "@/lib/media";
 import type { TranscriptLine } from "@/lib/youtube";
 
 const model = () => process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -47,7 +48,7 @@ summary: 2-4 sentences on what this section teaches.`;
 }
 
 export async function indexVideo(
-  videoId: string,
+  media: Media,
   durationSeconds: number | null,
   transcript: TranscriptLine[] | null,
 ): Promise<{ index: VideoIndex; inputTokens: number; outputTokens: number }> {
@@ -64,7 +65,7 @@ export async function indexVideo(
             role: "user",
             parts: [
               {
-                fileData: { fileUri: `https://www.youtube.com/watch?v=${videoId}`, mimeType: "video/*" },
+                fileData: media,
                 videoMetadata: durationSeconds
                   ? { startOffset: `${from}s`, endOffset: `${to}s`, fps: 0.5 }
                   : { fps: 0.5 },

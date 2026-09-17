@@ -1,5 +1,6 @@
 import { createAdminClient } from "@/lib/supabase/server";
 import { indexVideo } from "@/lib/ai/gemini";
+import { uploadVideoFile, type Media } from "@/lib/media";
 import { fetchTranscript, type TranscriptLine } from "@/lib/youtube";
 
 const CAPTION_CHUNK_SECONDS = 40;
@@ -17,20 +18,29 @@ export async function ingestVideo(videoId: string) {
     .update({ index_status: "processing", index_error: null })
     .eq("id", videoId)
     .in("index_status", ["pending", "failed"])
-    .select("id, duration_seconds");
+    .select("id, provider, source_url, duration_seconds");
   if (!claimed?.length) return;
-
-  const transcript = await fetchTranscript(videoId);
-  const duration =
-    claimed[0].duration_seconds ?? (transcript ? Math.ceil(transcript[transcript.length - 1].end) : null);
-
-  if (transcript) {
-    await replaceChunks(videoId, captionChunks(videoId, transcript));
-    if (duration) await db.from("videos").update({ duration_seconds: duration }).eq("id", videoId);
-  }
+  const video = claimed[0];
 
   try {
-    const { index, inputTokens, outputTokens } = await indexVideo(videoId, duration, transcript);
+    let media: Media;
+    let transcript: TranscriptLine[] | null = null;
+    let duration: number | null = video.duration_seconds;
+
+    if (video.provider === "file" && video.source_url) {
+      // Direct files: Gemini transcribes the audio itself while taking notes.
+      const uploaded = await uploadVideoFile(videoId, video.source_url);
+      media = uploaded.media;
+      duration ??= uploaded.durationSeconds;
+    } else {
+      media = { fileUri: `https://www.youtube.com/watch?v=${videoId}`, mimeType: "video/*" };
+      transcript = await fetchTranscript(videoId);
+      duration ??= transcript ? Math.ceil(transcript[transcript.length - 1].end) : null;
+      if (transcript) await replaceChunks(videoId, captionChunks(videoId, transcript));
+    }
+    if (duration) await db.from("videos").update({ duration_seconds: duration }).eq("id", videoId);
+
+    const { index, inputTokens, outputTokens } = await indexVideo(media, duration, transcript);
     const visualChunks = index.chunks.map((c) => ({
         video_id: videoId,
         start_seconds: Math.floor(c.start_seconds),

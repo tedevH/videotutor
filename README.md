@@ -27,7 +27,7 @@ Each case uses about 5 Gemini requests. Detailed results are written to `evals/r
 
 ## Setup
 
-1. Create a [Supabase](https://supabase.com) project, then run `supabase/migrations/0001_init.sql` in the SQL editor.
+1. Create a [Supabase](https://supabase.com) project, then run every file in `supabase/migrations/` in order (0001 → 0004) in the SQL editor.
 2. In Supabase → Authentication: enable **Email** (and optionally **Google**, then set `NEXT_PUBLIC_GOOGLE_AUTH_ENABLED=true`), and add `http://localhost:3000/auth/callback` to the redirect URLs.
 3. Get a Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey).
 4. Copy `.env.example` to `.env.local` and fill it in.
@@ -39,6 +39,27 @@ npm run dev
 ```
 
 `/dev-preview` renders a sample tutor answer (diagram, flowchart, plot) without any keys — useful when working on the renderers.
+
+## Video sources
+
+`src/lib/video-sources.ts` decides what links are allowed:
+
+| Source | How the tutor sees it |
+|---|---|
+| YouTube | Gemini watches it directly (notes ahead of time + the clip at each question) |
+| Video files (.mp4/.webm/.mov) from `.edu` sites or the Internet Archive | Downloaded with redirect, DNS and size checks (≤ 400 MB), uploaded to Gemini, then same as YouTube |
+| Vimeo | Gemini can't fetch it, so the browser sends captions it played plus frames (needs "exact diagrams" on) |
+
+Everything else (other hosts, http, IP addresses, credentials in URLs, shorteners) is rejected.
+
+## Billing (Stripe)
+
+1. Add `STRIPE_SECRET_KEY` (start with a `sk_test_` key) and `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` to `.env.local`.
+2. `npm run stripe:setup` creates the Pro product with monthly ($9) and yearly ($72) prices, found later by lookup key.
+3. Webhooks: locally run `stripe listen --forward-to localhost:3000/api/stripe/webhook` and put the printed `whsec_` secret in `STRIPE_WEBHOOK_SECRET`. In production, add an endpoint for `https://<your-domain>/api/stripe/webhook` with events `checkout.session.completed` and `customer.subscription.created/updated/deleted`.
+4. In the Stripe Dashboard, save the Customer Portal settings once (required before "Manage billing" works).
+
+Plan limits live in `src/lib/plans.ts`.
 
 ## Layout
 

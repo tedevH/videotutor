@@ -37,7 +37,7 @@ export function AddVideoForm({ signedIn = true }: { signedIn?: boolean }) {
         <input
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="Paste a YouTube link…"
+          placeholder="Paste a lecture link (YouTube, Vimeo…)"
           required
           className="min-w-0 flex-1 rounded-xl border border-line bg-white px-4 py-3 text-base outline-none focus:border-accent"
         />

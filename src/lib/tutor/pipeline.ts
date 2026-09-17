@@ -1,5 +1,6 @@
 import { ThinkingLevel } from "@google/genai";
-import { addUsage, askTutor, lookAtMoment, needsSolving, reviewAnswer, solveWithCode, type Usage } from "@/lib/ai/tutor";
+import { addUsage, askTutor, lookAtMoment, needsSolving, reviewAnswer, solveWithCode, type LiveContext, type Usage } from "@/lib/ai/tutor";
+import type { Media } from "@/lib/media";
 import { buildContext, buildOutline, describeMoment, REVIEW_PROMPT, SOLVER_PROMPT, SYSTEM_PROMPT, type ChunkRow } from "@/lib/tutor/prompt";
 import type { Moment, TutorResponse } from "@/lib/tutor/schema";
 
@@ -7,7 +8,9 @@ const MOMENT_BEFORE = 150;
 const MOMENT_AFTER = 20;
 
 export type TutorInput = {
-  videoId: string;
+  /** What Gemini can watch directly; null for sources it can't (then `live` is used). */
+  media: Media | null;
+  live: LiveContext | null;
   timestamp: number;
   question: string;
   frameJpeg: string | null;
@@ -35,7 +38,7 @@ export type TutorRun = {
  *   (frame annotations are placed inside askTutor when a frame was captured)
  */
 export async function runTutor(input: TutorInput): Promise<TutorRun> {
-  const look = await lookAtMoment(input.videoId, input.timestamp, input.frameJpeg, input.question).catch((err) => {
+  const look = await lookAtMoment(input.media, input.timestamp, input.frameJpeg, input.question, input.live).catch((err) => {
     console.error("look pass failed", err);
     return null;
   });

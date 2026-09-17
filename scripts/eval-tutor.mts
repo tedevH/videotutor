@@ -83,7 +83,8 @@ for (const c of cases) {
   const { video, chunks } = await loadVideo(c.videoId);
   const t0 = Date.now();
   const run = await runTutor({
-    videoId: c.videoId,
+    media: { fileUri: `https://www.youtube.com/watch?v=${c.videoId}`, mimeType: "video/*" },
+    live: null,
     timestamp: c.timestamp,
     question: c.question,
     frameJpeg: null,

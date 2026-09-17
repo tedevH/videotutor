@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { signFrameUrls, uploadFrame } from "@/lib/frames";
+import { mediaForVideo, VIDEO_MEDIA_COLUMNS, type VideoRow } from "@/lib/media";
+import { questionsPerDay } from "@/lib/plans";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { runTutor } from "@/lib/tutor/pipeline";
 import { summarizeHistory, type ChunkRow } from "@/lib/tutor/prompt";
@@ -7,9 +9,11 @@ import { summarizeHistory, type ChunkRow } from "@/lib/tutor/prompt";
 // Hard questions run a code-checked solve pass, which can take a minute or more.
 export const maxDuration = 300;
 
-const FREE_DAILY_QUESTIONS = 50;
 const HISTORY_MESSAGES = 8;
 const MAX_FRAME_BASE64 = 2_000_000;
+const MAX_CAPTION_CHARS = 8000;
+const MAX_RECENT_FRAMES = 6;
+const MAX_RECENT_FRAME_BASE64 = 250_000;
 
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id: sessionId } = await params;
@@ -19,7 +23,13 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 
-  const body = (await request.json()) as { text?: string; timestamp?: number; frame?: string | null };
+  const body = (await request.json()) as {
+    text?: string;
+    timestamp?: number;
+    frame?: string | null;
+    captions?: string;
+    recentFrames?: string[];
+  };
   const text = body.text?.trim();
   const timestamp = Math.max(0, body.timestamp ?? 0);
   const frame = typeof body.frame === "string" && body.frame.length < MAX_FRAME_BASE64 ? body.frame : null;
@@ -28,7 +38,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // RLS guarantees this only returns the user's own session.
   const { data: session } = await supabase
     .from("sessions")
-    .select("id, video_id, videos(title, channel, summary, index_status)")
+    .select(`id, video_id, videos(title, channel, summary, index_status, ${VIDEO_MEDIA_COLUMNS})`)
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
@@ -43,8 +53,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .eq("kind", "tutor")
       .gte("created_at", new Date(Date.now() - 86_400_000).toISOString()),
   ]);
-  if (profile?.plan === "free" && (usedToday ?? 0) >= FREE_DAILY_QUESTIONS) {
-    return NextResponse.json({ error: "You've hit today's free question limit." }, { status: 429 });
+  const limit = questionsPerDay(profile?.plan);
+  if ((usedToday ?? 0) >= limit) {
+    return NextResponse.json(
+      {
+        error:
+          profile?.plan === "pro"
+            ? `You've asked ${limit} questions today. The limit resets in 24 hours.`
+            : `You've used today's ${limit} free questions. Upgrade to Pro for ${questionsPerDay("pro")} a day.`,
+        upgrade: profile?.plan !== "pro",
+      },
+      { status: 429 },
+    );
   }
 
   // Read history before inserting the new question so it isn't counted as "earlier".
@@ -75,8 +95,22 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .single();
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 });
 
+  const videoRow = session.videos as unknown as VideoRow;
+  const media = await mediaForVideo(videoRow).catch((err) => {
+    console.error("video media unavailable", err);
+    return null;
+  });
+  // Browser-side context, used when Gemini can't watch the video itself.
+  const live = {
+    captions: typeof body.captions === "string" ? body.captions.slice(-MAX_CAPTION_CHARS) : "",
+    recentFrames: Array.isArray(body.recentFrames)
+      ? body.recentFrames.filter((f) => typeof f === "string" && f.length < MAX_RECENT_FRAME_BASE64).slice(-MAX_RECENT_FRAMES)
+      : [],
+  };
+
   const { response, model, usage } = await runTutor({
-    videoId: session.video_id,
+    media,
+    live: media ? null : live,
     timestamp,
     question: text,
     frameJpeg: frame,

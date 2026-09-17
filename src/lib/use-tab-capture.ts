@@ -59,7 +59,7 @@ export function useTabCapture() {
   }, [stop]);
 
   /** Returns the region of `element` from the latest tab frame as base64 JPEG (no data: prefix). */
-  const grab = useCallback((element: HTMLElement | null): string | null => {
+  const grab = useCallback((element: HTMLElement | null, maxWidth = MAX_FRAME_WIDTH): string | null => {
     const el = video.current;
     if (!stream.current || !el || !element || !el.videoWidth) return null;
 
@@ -73,7 +73,7 @@ export function useTabCapture() {
     const sh = Math.min(el.videoHeight - sy, rect.height * scaleY);
     if (sw < 50 || sh < 50) return null;
 
-    const outW = Math.min(MAX_FRAME_WIDTH, Math.round(sw));
+    const outW = Math.min(maxWidth, Math.round(sw));
     const canvas = document.createElement("canvas");
     canvas.width = outW;
     canvas.height = Math.round((sh / sw) * outW);

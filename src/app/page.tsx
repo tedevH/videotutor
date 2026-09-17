@@ -3,6 +3,7 @@ import { join } from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddVideoForm } from "@/components/add-video-form";
+import { PricingCards } from "@/components/pricing-cards";
 import { DemoVideo } from "@/components/landing/demo-video";
 import { StaticDiagrams } from "@/components/landing/static-diagrams";
 import { CollegeIllustration, ExamIllustration, HighSchoolIllustration } from "@/components/landing/student-illustrations";
@@ -37,7 +38,7 @@ const SUBJECTS = [
 const FAQS = [
   {
     q: "What videos does it work with?",
-    a: "Any public YouTube video: university lectures, AP review, Khan-style explainers, conference talks, coding tutorials. Paste the link and start watching.",
+    a: "Public videos on YouTube and Vimeo, plus lecture video files hosted by universities (.edu) and the Internet Archive. Other sites are blocked for now to keep things safe. For Vimeo, turn on exact diagrams so the tutor can see what's playing.",
   },
   {
     q: "How does the tutor know what's on screen?",
@@ -61,7 +62,7 @@ const FAQS = [
   },
   {
     q: "Is it free?",
-    a: "Yes, during early access, with a daily question limit. Your questions and diagrams are saved to your account so you can review them before exams.",
+    a: "The Free plan gives you 15 questions a day with every kind of explanation. Pro ($9/month, or $72/year) raises that to 200 a day for heavy courses and exam season. Cancel anytime.",
   },
   {
     q: "Who can see my questions?",
@@ -93,6 +94,9 @@ export default async function Home() {
           <a href="#faq" className="hidden hover:underline sm:inline">
             FAQ
           </a>
+          <Link href="/pricing" className="hover:underline">
+            Pricing
+          </Link>
           <Link href="/login" className="rounded-full bg-ink px-4 py-2 font-medium text-white hover:bg-ink/85">
             Sign in
           </Link>
@@ -112,13 +116,13 @@ export default async function Home() {
           </div>
           <div className="lg:pb-3">
             <p className="text-lg leading-relaxed text-ink/80">
-              Paste any YouTube lesson. When something doesn&apos;t click, start typing. The video stops, and a tutor that watched the same
+              Paste any lecture from YouTube, Vimeo or your university. When something doesn&apos;t click, start typing. The video stops, and a tutor that watched the same
               minute you did explains it, drawing right on the frame you&apos;re stuck on.
             </p>
             <div className="mt-6">
               <AddVideoForm signedIn={false} />
             </div>
-            <p className="mt-2 text-sm text-muted">Free during early access. Works for every subject.</p>
+            <p className="mt-2 text-sm text-muted">Free to start. Works for every subject.</p>
           </div>
         </div>
       </section>
@@ -138,7 +142,7 @@ export default async function Home() {
               <li key={u} className="flex h-12 w-32 items-center justify-center text-lg font-semibold text-ink/55 sm:w-36">
                 {logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logo} alt={u} className="max-h-10 max-w-full object-contain opacity-60 grayscale" />
+                  <img src={logo} alt={u} className="max-h-10 max-w-full object-contain" />
                 ) : (
                   u
                 )}
@@ -241,6 +245,14 @@ export default async function Home() {
               <p className="mt-2 leading-relaxed text-ink/80">{c.body}</p>
             </article>
           ))}
+        </div>
+      </section>
+
+      {/* pricing */}
+      <section id="pricing" className="mx-auto mt-28 w-full max-w-6xl scroll-mt-10 px-4 sm:px-6">
+        <h2 className="text-center text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Start free. Go Pro for hard courses.</h2>
+        <div className="mt-10">
+          <PricingCards signedIn={false} currentPlan={null} />
         </div>
       </section>
 

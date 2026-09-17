@@ -3,17 +3,26 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { TutorBlocks } from "@/components/blocks/tutor-blocks";
+import { FilePlayer } from "@/components/players/file-player";
+import { VimeoPlayer } from "@/components/players/vimeo-player";
 import { YouTubePlayer, type PlayerHandle } from "@/components/youtube-player";
 import { useTabCapture } from "@/lib/use-tab-capture";
 import type { StoredMessage, TutorResponse, UserContent } from "@/lib/tutor/schema";
 import { formatTime } from "@/lib/youtube";
 
 const SAVE_POSITION_MS = 15_000;
+// For sources Gemini can't watch directly, the browser keeps what the tutor needs.
+const CAPTION_WINDOW_SECONDS = 180;
+const RECENT_FRAME_EVERY_MS = 5000;
+const RECENT_FRAMES = 6;
+const RECENT_FRAME_WIDTH = 640;
 const POLL_STATUS_MS = 5_000;
 
 export function WatchView(props: {
   sessionId: string;
   videoId: string;
+  provider: "youtube" | "vimeo" | "file";
+  sourceUrl: string;
   title: string | null;
   channel: string | null;
   initialStatus: string;
@@ -25,6 +34,9 @@ export function WatchView(props: {
   const capture = useTabCapture();
   /** Exact frame grabbed at the moment of pausing; reused for follow-ups until playback resumes. */
   const pausedFrame = useRef<string | null>(null);
+  const captions = useRef<{ at: number; text: string }[]>([]);
+  const recentFrames = useRef<string[]>([]);
+  const needsLiveContext = props.provider === "vimeo";
   const input = useRef<HTMLTextAreaElement>(null);
   const bottom = useRef<HTMLDivElement>(null);
 
@@ -32,7 +44,7 @@ export function WatchView(props: {
   const [draft, setDraft] = useState("");
   const [pausedAt, setPausedAt] = useState<number | null>(null);
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ message: string; upgrade?: boolean } | null>(null);
   const [status, setStatus] = useState(props.initialStatus);
   const [duration, setDuration] = useState(0);
 
@@ -69,6 +81,23 @@ export function WatchView(props: {
       window.removeEventListener("pagehide", onHide);
     };
   }, [savePosition]);
+
+  const { status: captureStatus, grab } = capture;
+  useEffect(() => {
+    if (!needsLiveContext || captureStatus !== "on") return;
+    const t = setInterval(() => {
+      if (!player.current?.isPlaying()) return;
+      const frame = grab(playerBox.current, RECENT_FRAME_WIDTH);
+      if (frame) recentFrames.current = [...recentFrames.current, frame].slice(-RECENT_FRAMES);
+    }, RECENT_FRAME_EVERY_MS);
+    return () => clearInterval(t);
+  }, [needsLiveContext, captureStatus, grab]);
+
+  function onCaption(text: string, at: number) {
+    const last = captions.current[captions.current.length - 1];
+    if (last?.text === text) return;
+    captions.current = [...captions.current, { at, text }].filter((c) => c.at > at - CAPTION_WINDOW_SECONDS);
+  }
 
   useEffect(() => {
     bottom.current?.scrollIntoView({ behavior: "smooth", block: "end" });
@@ -122,15 +151,28 @@ export function WatchView(props: {
       const res = await fetch(`/api/sessions/${props.sessionId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, timestamp, frame: pausedFrame.current }),
+        body: JSON.stringify({
+          text,
+          timestamp,
+          frame: pausedFrame.current,
+          ...(needsLiveContext && {
+            captions: captions.current.filter((c) => c.at <= timestamp + 1).map((c) => c.text).join(" "),
+            recentFrames: recentFrames.current,
+          }),
+        }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? "The tutor couldn't answer");
+      if (!res.ok) {
+        setMessages((m) => m.filter((x) => x.id !== optimistic.id));
+        setDraft(text);
+        setError({ message: data.error ?? "The tutor couldn't answer", upgrade: data.upgrade });
+        return;
+      }
       setMessages((m) => [...m.filter((x) => x.id !== optimistic.id), ...data.messages]);
     } catch (e) {
       setMessages((m) => m.filter((x) => x.id !== optimistic.id));
       setDraft(text);
-      setError(e instanceof Error ? e.message : "Something went wrong");
+      setError({ message: e instanceof Error ? e.message : "Something went wrong" });
     } finally {
       setSending(false);
     }
@@ -170,7 +212,7 @@ export function WatchView(props: {
     const res = await fetch("/api/videos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url: props.videoId }),
+      body: JSON.stringify({ url: props.sourceUrl }),
     });
     if (!res.ok) setStatus("failed");
   }
@@ -191,7 +233,13 @@ export function WatchView(props: {
           </div>
         </div>
         <div ref={playerBox}>
-          <YouTubePlayer ref={player} videoId={props.videoId} start={props.startAt} onStateChange={onPlayerStateChange} />
+          {props.provider === "vimeo" ? (
+            <VimeoPlayer ref={player} url={props.sourceUrl} start={props.startAt} onStateChange={onPlayerStateChange} onCaption={onCaption} />
+          ) : props.provider === "file" ? (
+            <FilePlayer ref={player} src={props.sourceUrl} start={props.startAt} onStateChange={onPlayerStateChange} />
+          ) : (
+            <YouTubePlayer ref={player} videoId={props.videoId} start={props.startAt} onStateChange={onPlayerStateChange} />
+          )}
         </div>
         {duration > 0 && questionTimes.length > 0 && (
           <div className="relative h-4" aria-label="Moments you asked about">
@@ -242,7 +290,16 @@ export function WatchView(props: {
               </button>
             </div>
           )}
-          {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+          {error && (
+            <p className="mb-2 text-sm text-red-600">
+              {error.message}{" "}
+              {error.upgrade && (
+                <Link href="/pricing" className="font-semibold underline">
+                  See plans
+                </Link>
+              )}
+            </p>
+          )}
           <div className="flex items-end gap-2">
             <textarea
               ref={input}
@@ -270,6 +327,13 @@ export function WatchView(props: {
 
 function IndexStatus({ status, onRetry }: { status: string; onRetry: () => void }) {
   if (status === "ready") return null;
+  if (status === "live") {
+    return (
+      <span className="rounded-full bg-sky-50 px-3 py-1 text-xs text-sky-900" title="Vimeo videos can't be analyzed ahead of time.">
+        Turn on exact diagrams so the tutor can see this video
+      </span>
+    );
+  }
   if (status === "failed") {
     return (
       <span className="flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-xs text-amber-800">

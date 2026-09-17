@@ -25,15 +25,6 @@ function checkId(id: string | null | undefined) {
   return id && ID_RE.test(id) ? id : null;
 }
 
-export async function fetchVideoMeta(videoId: string) {
-  const res = await fetch(
-    `https://www.youtube.com/oembed?format=json&url=https://www.youtube.com/watch?v=${videoId}`,
-  );
-  if (!res.ok) return null;
-  const data = (await res.json()) as { title?: string; author_name?: string };
-  return { title: data.title ?? null, channel: data.author_name ?? null };
-}
-
 export type TranscriptLine = { start: number; end: number; text: string };
 
 /** Free captions from YouTube. Returns null when the video has none. */
