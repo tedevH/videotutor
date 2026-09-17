@@ -95,7 +95,7 @@ export function DemoVideo() {
             <div className="demo-camera relative h-full w-full" style={{ transform: cameraTransform(cameraFor(t)) }}>
               {/* app bar */}
               <div className="absolute inset-x-6 top-0 flex h-14 items-center justify-between">
-                <span className="font-hand text-[30px]">VideoTutor</span>
+                <span className="text-[24px] font-semibold tracking-tight">VideoTutor</span>
                 <span className="rounded-full border border-ink/10 bg-white px-4 py-1.5 text-[15px] text-muted">Calculus I · Lecture 7</span>
               </div>
 
@@ -133,7 +133,7 @@ export function DemoVideo() {
               <div className="absolute right-6 top-16 flex h-[587px] w-[368px] flex-col rounded-xl border border-ink/10 bg-white">
                 <div className="flex-1 space-y-3 overflow-hidden p-4">
                   {!sent && (
-                    <p className="mt-24 text-center font-hand text-[26px] text-muted">Confused? Just start typing.</p>
+                    <p className="mt-24 text-center text-[18px] text-muted">Confused? Just start typing.</p>
                   )}
                   {sent && (
                     <div className="flex flex-col items-end gap-1">
@@ -142,7 +142,7 @@ export function DemoVideo() {
                     </div>
                   )}
                   {thinking && (
-                    <p className="flex items-center gap-2 font-hand text-[22px] text-muted">
+                    <p className="flex items-center gap-2 text-[15px] text-muted">
                       Looking at 13:02
                       <span className="flex gap-1">
                         {[0, 1, 2].map((i) => (
@@ -174,7 +174,7 @@ export function DemoVideo() {
                             <path d="M640,330 Q560,318 490,262 M490,262 L512,264 M490,262 L497,283" fill="none" stroke="#ff6b6b" strokeWidth="7" strokeLinecap="round" pathLength={1} className="sketch-stroke" />
                           )}
                           {drawStep >= 3 && (
-                            <text x="575" y="378" fill="#ff8787" fontSize="46" className="sketch-fade font-hand" stroke="#22302a" strokeWidth="8" paintOrder="stroke">
+                            <text x="575" y="378" fill="#ff8787" fontSize="34" className="sketch-fade" stroke="#22302a" strokeWidth="8" paintOrder="stroke">
                               height = x²
                             </text>
                           )}

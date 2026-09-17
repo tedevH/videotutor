@@ -1,3 +1,5 @@
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { AddVideoForm } from "@/components/add-video-form";
@@ -6,6 +8,15 @@ import { StaticDiagrams } from "@/components/landing/static-diagrams";
 import { createClient } from "@/lib/supabase/server";
 
 const UNIVERSITIES = ["Stanford", "UC Berkeley", "Cornell", "Emory", "UC Davis", "MIT", "UCLA", "Harvard", "Yale", "Georgia Tech"];
+
+/** Logos are opt-in: drop an approved file at public/logos/<slug>.svg (or .png) and it replaces the name. */
+function universityLogo(name: string) {
+  const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  for (const ext of ["svg", "png"]) {
+    if (existsSync(join(process.cwd(), "public", "logos", `${slug}.${ext}`))) return `/logos/${slug}.${ext}`;
+  }
+  return null;
+}
 
 const SUBJECTS = [
   { name: "Calculus", ask: "why does the chain rule multiply?" },
@@ -68,7 +79,7 @@ export default async function Home() {
     <main className="graph-paper flex flex-1 flex-col overflow-x-clip text-ink">
       {/* nav */}
       <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link href="/" className="font-hand text-[32px] leading-none">
+        <Link href="/" className="text-xl font-semibold tracking-tight">
           VideoTutor
         </Link>
         <nav className="flex items-center gap-5 text-sm">
@@ -81,7 +92,7 @@ export default async function Home() {
           <a href="#faq" className="hidden hover:underline sm:inline">
             FAQ
           </a>
-          <Link href="/login" className="rounded-full bg-ink px-4 py-2 font-medium text-paper hover:bg-ink/85">
+          <Link href="/login" className="rounded-full bg-ink px-4 py-2 font-medium text-white hover:bg-ink/85">
             Sign in
           </Link>
         </nav>
@@ -91,11 +102,11 @@ export default async function Home() {
       <section className="mx-auto w-full max-w-6xl px-4 pb-10 pt-8 sm:px-6 sm:pt-14">
         <div className="grid items-end gap-8 lg:grid-cols-[1.25fr_1fr]">
           <div>
-            <p className="font-hand text-2xl text-pen">for the moment a lecture loses you</p>
-            <h1 className="mt-2 font-serif text-[46px] leading-[0.95] tracking-[-0.01em] sm:text-[84px]">
+            <p className="text-sm font-medium text-pen">For the moment a lecture loses you</p>
+            <h1 className="mt-3 text-[40px] font-semibold leading-[1.05] tracking-tight sm:text-[64px]">
               Pause the lecture.
               <br />
-              <span className="italic">Ask</span> the part you <span className="marker">missed</span>.
+              Ask the part you <span className="marker">missed</span>.
             </h1>
           </div>
           <div className="lg:pb-3">
@@ -118,20 +129,27 @@ export default async function Home() {
 
       {/* universities */}
       <section className="mx-auto mt-20 w-full max-w-6xl px-4 sm:px-6">
-        <p className="text-center text-sm text-muted">Works with lectures from</p>
+        <p className="text-center text-sm text-muted">Used by students from</p>
         <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
-          {UNIVERSITIES.map((u) => (
-            <li key={u} className="font-serif text-[26px] text-ink/70">
-              {u}
-            </li>
-          ))}
+          {UNIVERSITIES.map((u) => {
+            const logo = universityLogo(u);
+            return (
+              <li key={u} className="flex h-10 items-center text-lg font-semibold text-ink/55">
+                {logo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={logo} alt={u} className="h-9 w-auto opacity-70 grayscale" />
+                ) : (
+                  u
+                )}
+              </li>
+            );
+          })}
         </ul>
-        <p className="mt-3 text-center text-xs text-muted">and anything else on YouTube</p>
       </section>
 
       {/* how it works */}
       <section id="how" className="mx-auto mt-28 w-full max-w-6xl scroll-mt-10 px-4 sm:px-6">
-        <h2 className="max-w-2xl font-serif text-[44px] leading-none sm:text-[56px]">Office hours, at the exact second you need them.</h2>
+        <h2 className="max-w-2xl text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Office hours, at the exact second you need them.</h2>
         <ol className="mt-12 grid gap-10 md:grid-cols-3">
           {[
             {
@@ -151,7 +169,7 @@ export default async function Home() {
             },
           ].map((s) => (
             <li key={s.n} className="border-t-2 border-ink pt-4">
-              <span className="font-hand text-4xl text-pen">{s.n}.</span>
+              <span className="text-sm font-semibold text-pen">Step {s.n}</span>
               <h3 className="mt-1 text-xl font-semibold">{s.title}</h3>
               <p className="mt-2 leading-relaxed text-ink/75">{s.body}</p>
             </li>
@@ -162,8 +180,8 @@ export default async function Home() {
       {/* static diagrams */}
       <section className="mx-auto mt-28 w-full max-w-6xl px-4 sm:px-6">
         <div className="flex flex-wrap items-end justify-between gap-4">
-          <h2 className="max-w-xl font-serif text-[44px] leading-none sm:text-[56px]">
-            It draws what the professor <span className="italic">meant</span>.
+          <h2 className="max-w-xl text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">
+            It draws what the professor meant.
           </h2>
           <p className="max-w-sm text-ink/75">Two real kinds of questions, answered the way a good TA would sketch them on a napkin.</p>
         </div>
@@ -174,13 +192,13 @@ export default async function Home() {
 
       {/* subjects */}
       <section id="subjects" className="mx-auto mt-28 w-full max-w-6xl scroll-mt-10 px-4 sm:px-6">
-        <h2 className="font-serif text-[44px] leading-none sm:text-[56px]">Every subject. Every lecture.</h2>
+        <h2 className="text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Every subject. Every lecture.</h2>
         <p className="mt-3 max-w-xl text-ink/75">If it&apos;s taught on video, you can stop and ask about it.</p>
         <ul className="mt-10 grid grid-cols-1 border-l border-t border-ink/15 sm:grid-cols-2 lg:grid-cols-4">
           {SUBJECTS.map((s) => (
             <li key={s.name} className="border-b border-r border-ink/15 bg-paper/60 p-5">
               <p className="font-semibold">{s.name}</p>
-              <p className="mt-2 font-hand text-[22px] leading-tight text-ink/70">&ldquo;{s.ask}&rdquo;</p>
+              <p className="mt-2 text-[15px] leading-snug text-ink/65">&ldquo;{s.ask}&rdquo;</p>
             </li>
           ))}
         </ul>
@@ -188,8 +206,8 @@ export default async function Home() {
 
       {/* students */}
       <section className="mx-auto mt-28 w-full max-w-6xl px-4 sm:px-6">
-        <div className="rounded-3xl bg-ink px-6 py-12 text-paper sm:px-12 sm:py-16">
-          <h2 className="max-w-2xl font-serif text-[44px] leading-none sm:text-[56px]">Built for students who learn from video.</h2>
+        <div className="rounded-3xl border border-ink/10 bg-white px-6 py-12 sm:px-12 sm:py-16">
+          <h2 className="max-w-2xl text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Built for students who learn from video.</h2>
           <div className="mt-12 grid gap-10 md:grid-cols-3">
             {[
               {
@@ -206,8 +224,8 @@ export default async function Home() {
               },
             ].map((c) => (
               <div key={c.who}>
-                <p className="font-hand text-3xl text-marker">{c.who}</p>
-                <p className="mt-3 leading-relaxed text-paper/80">{c.body}</p>
+                <p className="text-lg font-semibold text-pen">{c.who}</p>
+                <p className="mt-2 leading-relaxed text-ink/75">{c.body}</p>
               </div>
             ))}
           </div>
@@ -217,7 +235,7 @@ export default async function Home() {
       {/* faq */}
       <section id="faq" className="mx-auto mt-28 grid w-full max-w-6xl scroll-mt-10 gap-10 px-4 sm:px-6 lg:grid-cols-[1fr_1.6fr]">
         <div>
-          <h2 className="font-serif text-[44px] leading-none sm:text-[56px]">Questions</h2>
+          <h2 className="text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Questions</h2>
           <p className="mt-3 text-ink/75">
             Fitting, really. Still curious? Paste a lecture and ask the tutor.
           </p>
@@ -237,8 +255,8 @@ export default async function Home() {
 
       {/* closing */}
       <section className="mx-auto mt-28 w-full max-w-3xl px-4 text-center sm:px-6">
-        <h2 className="font-serif text-[48px] leading-none sm:text-[64px]">
-          Next time you&apos;re lost, <span className="italic">just ask</span>.
+        <h2 className="text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">
+          Next time you&apos;re lost, just ask.
         </h2>
         <div className="mx-auto mt-8 max-w-xl text-left">
           <AddVideoForm signedIn={false} />
@@ -246,7 +264,7 @@ export default async function Home() {
       </section>
 
       <footer className="mx-auto mt-24 flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-ink/15 px-4 py-8 text-sm text-muted sm:px-6">
-        <span className="font-hand text-2xl text-ink">VideoTutor</span>
+        <span className="font-semibold text-ink">VideoTutor</span>
         <span>© 2026 VideoTutor</span>
       </footer>
     </main>

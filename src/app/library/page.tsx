@@ -14,7 +14,7 @@ export default async function LibraryPage() {
   return (
     <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6">
       <header className="flex items-center justify-between">
-        <span className="font-hand text-3xl">VideoTutor</span>
+        <span className="text-xl font-semibold tracking-tight">VideoTutor</span>
         <SignOutButton />
       </header>
 

@@ -9,7 +9,7 @@ function Card({ question, at, lecture, children, note }: { question: string; at:
         <span className="truncate">{lecture}</span>
         <span className="shrink-0 font-medium tabular-nums text-pen">asked @ {at}</span>
       </div>
-      <p className="mt-2 font-hand text-[26px] leading-tight">&ldquo;{question}&rdquo;</p>
+      <p className="mt-2 text-lg font-semibold leading-snug">&ldquo;{question}&rdquo;</p>
       <div className="mt-4 rounded-xl border border-dashed border-ink/15 bg-[#fffdf8] p-2">{children}</div>
       <figcaption className="mt-4 text-[15px] leading-relaxed text-ink/80">{note}</figcaption>
     </figure>
@@ -40,19 +40,19 @@ function TangentDiagram() {
       <path d={line(slopeTangent, 0, 8.4)} stroke={PEN} strokeWidth="2.5" fill="none" />
       {/* rise and run of the secant */}
       <path d={`M${X(a)},${Y(f(a))} L${X(b)},${Y(f(a))} L${X(b)},${Y(f(b))}`} stroke={BLUE} strokeWidth="1.5" fill="none" opacity="0.8" />
-      <text x={(X(a) + X(b)) / 2} y={Y(f(a)) + 22} textAnchor="middle" fontSize="20" fill={BLUE} className="font-hand">Δx</text>
-      <text x={X(b) + 8} y={(Y(f(a)) + Y(f(b))) / 2 + 12} fontSize="20" fill={BLUE} className="font-hand">Δy</text>
+      <text x={(X(a) + X(b)) / 2} y={Y(f(a)) + 22} textAnchor="middle" fontSize="15" fill={BLUE}>Δx</text>
+      <text x={X(b) + 8} y={(Y(f(a)) + Y(f(b))) / 2 + 12} fontSize="15" fill={BLUE}>Δy</text>
       <circle cx={X(a)} cy={Y(f(a))} r="4.5" fill={PEN} />
       <circle cx={X(b)} cy={Y(f(b))} r="4" fill={BLUE} />
-      <text x={X(a)} y={Y(0) + 22} textAnchor="middle" fontSize="20" fill={PEN} className="font-hand">a</text>
+      <text x={X(a)} y={Y(0) + 22} textAnchor="middle" fontSize="15" fill={PEN}>a</text>
       <line x1={X(a)} y1={Y(0)} x2={X(a)} y2={Y(f(a))} stroke={PEN} strokeWidth="1" strokeDasharray="3 4" />
-      <text x={388} y={Y(0) + 22} textAnchor="end" fontSize="18" fill={INK} opacity="0.6" className="font-hand">x</text>
+      <text x={388} y={Y(0) + 22} textAnchor="end" fontSize="18" fill={INK} opacity="0.6">x</text>
       {/* legend in the empty upper-left */}
-      <g className="font-hand" fontSize="20">
+      <g fontSize="15">
         <line x1="70" y1="38" x2="100" y2="38" stroke={BLUE} strokeWidth="2" strokeDasharray="6 5" />
-        <text x="108" y="44" fill={BLUE}>secant: Δy / Δx</text>
+        <text x="108" y="43" fill={BLUE}>secant: Δy / Δx</text>
         <line x1="70" y1="66" x2="100" y2="66" stroke={PEN} strokeWidth="2.5" />
-        <text x="108" y="72" fill={PEN}>tangent: slope f′(a)</text>
+        <text x="108" y="71" fill={PEN}>tangent: slope f′(a)</text>
       </g>
     </svg>
   );
@@ -89,19 +89,19 @@ function WaterDiagram() {
       <line x1={O.x} y1={O.y} x2={H2.x} y2={H2.y} stroke={INK} strokeWidth="5" strokeLinecap="round" />
       {[-52, 52].map(lonePair)}
       <path d={`M${arcStart.x},${arcStart.y} A${r},${r} 0 0 0 ${arcEnd.x},${arcEnd.y}`} stroke={PEN} strokeWidth="2" fill="none" />
-      <text x={O.x} y={O.y + r + 26} textAnchor="middle" fontSize="22" fill={PEN} className="font-hand">104.5°</text>
+      <text x={O.x} y={O.y + r + 26} textAnchor="middle" fontSize="15" fill={PEN}>104.5°</text>
 
       <circle cx={O.x} cy={O.y} r="25" fill="#fff" stroke={INK} strokeWidth="2.5" />
       <text x={O.x} y={O.y + 8} textAnchor="middle" fontSize="24" fontWeight="600" fill={INK}>O</text>
       {[H1, H2].map((h, i) => (
         <g key={i}>
           <circle cx={h.x} cy={h.y} r="18" fill="#fff" stroke={INK} strokeWidth="2.5" />
-          <text x={h.x} y={h.y + 7} textAnchor="middle" fontSize="20" fontWeight="600" fill={INK}>H</text>
-          <text x={h.x + (i ? 24 : -24)} y={h.y + 34} textAnchor="middle" fontSize="22" fill={BLUE} className="font-hand">δ+</text>
+          <text x={h.x} y={h.y + 7} textAnchor="middle" fontSize="15" fontWeight="600" fill={INK}>H</text>
+          <text x={h.x + (i ? 24 : -24)} y={h.y + 34} textAnchor="middle" fontSize="15" fill={BLUE}>δ+</text>
         </g>
       ))}
-      <text x={O.x + 42} y={O.y - 34} fontSize="22" fill={BLUE} className="font-hand">δ−</text>
-      <text x={O.x - 96} y={O.y - 44} fontSize="19" fill={INK} opacity="0.7" className="font-hand">lone pairs</text>
+      <text x={O.x + 42} y={O.y - 34} fontSize="15" fill={BLUE}>δ−</text>
+      <text x={O.x - 96} y={O.y - 44} fontSize="15" fill={INK} opacity="0.7">lone pairs</text>
 
       {/* net dipole: crossed tail at the positive end, head at the negative end */}
       <g stroke={PEN} strokeWidth="2.5" fill="none" strokeLinecap="round">
@@ -109,8 +109,8 @@ function WaterDiagram() {
         <path d="M331,116 L340,102 L349,116" />
         <line x1="332" y1="222" x2="348" y2="222" />
       </g>
-      <text x="352" y="176" fontSize="19" fill={PEN} className="font-hand">net</text>
-      <text x="352" y="196" fontSize="19" fill={PEN} className="font-hand">dipole</text>
+      <text x="352" y="176" fontSize="15" fill={PEN}>net</text>
+      <text x="352" y="196" fontSize="15" fill={PEN}>dipole</text>
     </svg>
   );
 }

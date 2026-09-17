@@ -182,7 +182,7 @@ export function WatchView(props: {
       {/* Video column */}
       <section className="flex flex-col gap-3 p-3 lg:flex-1 lg:overflow-y-auto lg:p-5">
         <div className="flex items-center justify-between gap-3">
-          <Link href="/library" className="font-hand text-2xl">
+          <Link href="/library" className="text-lg font-semibold tracking-tight">
             ← VideoTutor
           </Link>
           <div className="flex items-center gap-2">
@@ -218,7 +218,7 @@ export function WatchView(props: {
         <div className="flex-1 space-y-4 overflow-y-auto p-4">
           {messages.length === 0 && (
             <div className="mt-6 text-center text-muted">
-              <p className="font-hand text-2xl text-foreground">Confused? Just start typing.</p>
+              <p className="text-lg font-semibold text-foreground">Confused? Just start typing.</p>
               <p className="mt-1 text-sm">The video pauses and your tutor explains that exact moment — with diagrams.</p>
             </div>
           )}
@@ -376,7 +376,7 @@ function TutorMessage({ message, onRewatch }: { message: StoredMessage; onRewatc
 function Thinking() {
   return (
     <div className="flex items-center gap-2 text-sm text-muted">
-      <span className="font-hand text-xl">Thinking & sketching</span>
+      <span>Thinking & sketching</span>
       <span className="flex gap-1">
         {[0, 1, 2].map((i) => (
           <span key={i} className="h-1.5 w-1.5 animate-bounce rounded-full bg-muted" style={{ animationDelay: `${i * 150}ms` }} />

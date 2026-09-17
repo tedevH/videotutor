@@ -29,10 +29,10 @@ export function LectureBoard({ className = "" }: { className?: string }) {
 
       {/* axes */}
       <path d={`M${X(0)},400 L${X(0)},40 M60,${Y(0)} L${X(4.3)},${Y(0)}`} stroke="#e8e4d8" strokeWidth="2.5" fill="none" opacity="0.8" />
-      {[1, 2, 3, 4].map((n) => (
+      {[1, 2, 4].map((n) => (
         <g key={n}>
           <line x1={X(n)} y1={Y(0) - 6} x2={X(n)} y2={Y(0) + 6} stroke="#e8e4d8" strokeWidth="2" opacity="0.7" />
-          <text x={X(n)} y={Y(0) + 30} fill="#e8e4d8" opacity="0.75" fontSize="22" textAnchor="middle" className="font-hand">
+          <text x={X(n)} y={Y(0) + 30} fill="#e8e4d8" opacity="0.75" fontSize="18" textAnchor="middle">
             {n}
           </text>
         </g>
@@ -47,13 +47,13 @@ export function LectureBoard({ className = "" }: { className?: string }) {
       <path d={curve} stroke="#9fd3c7" strokeWidth="4" fill="none" strokeLinecap="round" />
 
       {/* chalk labels */}
-      <text x={X(3.72)} y={70} fill="#9fd3c7" fontSize="34" className="font-hand">y = x²</text>
-      <text x={X(1.25)} y={Y(2.2)} fill="#e9dc8a" fontSize="40" className="font-hand">A(x)</text>
-      <text x={X(3) + 26} y={Y(4.5)} fill="#f7c948" fontSize="32" className="font-hand">dA</text>
-      <text x={X(3) - 6} y={Y(0) + 32} fill="#f7c948" fontSize="24" textAnchor="middle" className="font-hand">x</text>
-      <text x={X(3) + 22} y={Y(0) + 32} fill="#f7c948" fontSize="22" className="font-hand">+dx</text>
-      <text x="520" y="170" fill="#e8e4d8" fontSize="44" className="font-hand">dA/dx = x²</text>
-      <path d="M516,182 C560,190 640,186 700,180" stroke="#e8e4d8" strokeWidth="2" fill="none" opacity="0.6" />
+      <text x={X(2.5)} y={120} fill="#9fd3c7" fontSize="24">y = x²</text>
+      <text x={X(1.25)} y={Y(2.2)} fill="#e9dc8a" fontSize="28">A(x)</text>
+      <text x={X(3) + 50} y={Y(7.7)} fill="#f7c948" fontSize="23">dA</text>
+      <text x={X(3) + 8} y={Y(0) + 30} fill="#f7c948" fontSize="18" textAnchor="middle">x</text>
+      
+      <text x="130" y="84" fill="#e8e4d8" fontSize="31">dA/dx = x²</text>
+      <path d="M126,96 C170,104 250,100 310,94" stroke="#e8e4d8" strokeWidth="2" fill="none" opacity="0.6" />
     </svg>
   );
 }
