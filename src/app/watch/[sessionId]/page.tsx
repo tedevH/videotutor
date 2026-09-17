@@ -4,8 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import type { StoredMessage } from "@/lib/tutor/schema";
 import { WatchView } from "./watch-view";
 
-export default async function WatchPage({ params }: PageProps<"/watch/[sessionId]">) {
+export default async function WatchPage({ params, searchParams }: PageProps<"/watch/[sessionId]">) {
   const { sessionId } = await params;
+  // `?t=123` deep-links to a moment (e.g. where a course concept is taught).
+  const { t } = await searchParams;
+  const jumpTo = typeof t === "string" && /^\d+$/.test(t) ? Number(t) : null;
   const supabase = await createClient();
 
   const { data: session } = await supabase
@@ -38,7 +41,7 @@ export default async function WatchPage({ params }: PageProps<"/watch/[sessionId
       title={video.title}
       channel={video.channel}
       initialStatus={video.index_status}
-      startAt={session.last_position}
+      startAt={jumpTo ?? session.last_position}
       initialMode={session.mode === "direct" ? "direct" : "socratic"}
       initialMessages={(await signFrameUrls((messages ?? []) as StoredMessage[])) as StoredMessage[]}
     />

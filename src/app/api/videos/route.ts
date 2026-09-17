@@ -1,7 +1,7 @@
 import { after, NextResponse } from "next/server";
 import { ingestVideo } from "@/lib/ingest";
-import { createAdminClient, createClient } from "@/lib/supabase/server";
-import { fetchSourceMeta, resolveVideoUrl } from "@/lib/video-sources";
+import { createClient } from "@/lib/supabase/server";
+import { addVideo } from "@/lib/videos";
 
 export const maxDuration = 300;
 
@@ -14,37 +14,8 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 
   const { url } = (await request.json()) as { url?: string };
-  const resolved = resolveVideoUrl(url ?? "");
-  if ("error" in resolved) return NextResponse.json({ error: resolved.error }, { status: 400 });
-
-  const db = createAdminClient();
-  const { data: existing } = await db.from("videos").select("id, index_status").eq("id", resolved.id).maybeSingle();
-
-  if (!existing) {
-    const meta = await fetchSourceMeta(resolved).catch(() => null);
-    if (!meta) return NextResponse.json({ error: "Video not found, private, or not embeddable" }, { status: 404 });
-    await db.from("videos").upsert(
-      {
-        id: resolved.id,
-        provider: resolved.provider,
-        source_url: resolved.sourceUrl,
-        ...meta,
-        // Vimeo can't be analyzed ahead of time; the tutor learns from playback instead.
-        index_status: resolved.provider === "vimeo" ? "live" : "pending",
-      },
-      { onConflict: "id", ignoreDuplicates: true },
-    );
-  }
-
-  const status = existing?.index_status ?? (resolved.provider === "vimeo" ? "live" : "pending");
-  if (status === "pending" || status === "failed") after(() => ingestVideo(resolved.id));
-
-  const { data: session, error } = await supabase
-    .from("sessions")
-    .upsert({ user_id: user.id, video_id: resolved.id, updated_at: new Date().toISOString() }, { onConflict: "user_id,video_id" })
-    .select("id")
-    .single();
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-  return NextResponse.json({ sessionId: session.id });
+  const result = await addVideo(supabase, user.id, url ?? "");
+  if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
+  if (result.needsIngest) after(() => ingestVideo(result.videoId));
+  return NextResponse.json({ sessionId: result.sessionId });
 }
