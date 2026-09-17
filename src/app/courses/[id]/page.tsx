@@ -55,7 +55,6 @@ export default async function CoursePage({ params }: PageProps<"/courses/[id]">)
           .map((s) => ({ sessionId: sessionByVideo.get(s.video_id!)!, seconds: s.start_seconds ?? 0 })),
       }))}
       plan={plan}
-      userId={user.id}
     />
   );
 }

@@ -1,4 +1,4 @@
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { signFrameUrls } from "@/lib/frames";
 import { createClient } from "@/lib/supabase/server";
 import type { StoredMessage } from "@/lib/tutor/schema";
@@ -17,6 +17,8 @@ export default async function WatchPage({ params, searchParams }: PageProps<"/wa
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) notFound();
+  // Whiteboard sessions have no video.
+  if (!session.video_id) redirect(`/board/${session.id}`);
 
   const { data: messages } = await supabase
     .from("messages")

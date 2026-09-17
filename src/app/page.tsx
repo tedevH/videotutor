@@ -6,6 +6,7 @@ import { AddVideoForm } from "@/components/add-video-form";
 import { PricingCards } from "@/components/pricing-cards";
 import { DemoVideo } from "@/components/landing/demo-video";
 import { StaticDiagrams } from "@/components/landing/static-diagrams";
+import { SubjectFlashcards } from "@/components/landing/subject-flashcards";
 import { CollegeIllustration, ExamIllustration, HighSchoolIllustration } from "@/components/landing/student-illustrations";
 import { createClient } from "@/lib/supabase/server";
 
@@ -20,20 +21,6 @@ function universityLogo(name: string) {
   return null;
 }
 
-const SUBJECTS = [
-  { name: "Calculus", ask: "why does the chain rule multiply?" },
-  { name: "Organic chemistry", ask: "where does the arrow push from?" },
-  { name: "Physics", ask: "why is normal force not mg here?" },
-  { name: "Biology", ask: "which phase does the DNA copy in?" },
-  { name: "Statistics", ask: "what is a p-value actually saying?" },
-  { name: "Computer science", ask: "why is this loop O(n log n)?" },
-  { name: "Economics", ask: "why does the curve shift left?" },
-  { name: "Linear algebra", ask: "what does the determinant measure?" },
-  { name: "Psychology", ask: "how is this different from conditioning?" },
-  { name: "History", ask: "how did that treaty lead to the war?" },
-  { name: "Accounting", ask: "why is this a debit?" },
-  { name: "Music theory", ask: "why does that chord resolve there?" },
-];
 
 const FAQS = [
   {
@@ -199,14 +186,9 @@ export default async function Home() {
       <section id="subjects" className="mx-auto mt-28 w-full max-w-6xl scroll-mt-10 px-4 sm:px-6">
         <h2 className="text-[32px] font-semibold leading-tight tracking-tight sm:text-[44px]">Every subject. Every lecture.</h2>
         <p className="mt-3 max-w-xl text-ink/75">If it&apos;s taught on video, you can stop and ask about it.</p>
-        <ul className="mt-10 grid grid-cols-1 border-l border-t border-ink/15 sm:grid-cols-2 lg:grid-cols-4">
-          {SUBJECTS.map((s) => (
-            <li key={s.name} className="border-b border-r border-ink/15 bg-paper/60 p-5">
-              <p className="font-semibold">{s.name}</p>
-              <p className="mt-2 text-[15px] leading-snug text-ink/65">&ldquo;{s.ask}&rdquo;</p>
-            </li>
-          ))}
-        </ul>
+        <div className="mt-12">
+          <SubjectFlashcards />
+        </div>
       </section>
 
       {/* students */}

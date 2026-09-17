@@ -1,5 +1,6 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel, type Part } from "@google/genai";
 import { groundFrameBlock } from "@/lib/ai/ground";
+import { compileExpr } from "@/lib/math-eval";
 import { repairLatex } from "@/lib/tutor/latex-repair";
 import { withModelFallback } from "@/lib/ai/retry";
 import type { Media } from "@/lib/media";
@@ -127,7 +128,7 @@ export async function solveWithCode(system: string, context: string) {
 /** Pass 3: answer the question, grounded in the earlier passes and (when captured) the exact frame. */
 export async function askTutor(
   system: string,
-  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel; drawingPng?: string | null },
+  input: { context: string; frameJpeg: string | null; timestamp: number; thinking?: ThinkingLevel; drawingPng?: string | null; question?: string },
 ): Promise<{ response: TutorResponse; model: string; usage: Usage }> {
   const model = tutorModel();
   const parts: Part[] = [{ text: input.context }];
@@ -140,7 +141,8 @@ export async function askTutor(
   let contents = [{ role: "user", parts }];
 
   // Structured output guarantees valid JSON; one repair attempt covers schema details Zod rejects.
-  for (let attempt = 0; attempt < 2; attempt++) {
+  let lastUsable: TutorResponse | null = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
     const res = await withModelFallback(model, (m) =>
       client().models.generateContent({
         model: m,
@@ -164,19 +166,25 @@ export async function askTutor(
       const parsed = tutorResponse.safeParse(repairLatex(JSON.parse(raw)));
       if (parsed.success) {
         const response = enforceRules(parsed.data, !!input.frameJpeg, input.timestamp);
-        return input.frameJpeg ? groundFrames(response, input.frameJpeg, model, usage) : { response, model, usage };
+        const problem = attempt < 2 ? teachingProblem(parsed.data, response, !!input.frameJpeg, input.question ?? "") : null;
+        if (!problem) return input.frameJpeg ? groundFrames(response, input.frameJpeg, model, usage) : { response, model, usage };
+        // Valid JSON but a weak answer: keep it as a fallback and ask for a fix.
+        lastUsable = response;
+        error = problem;
+      } else {
+        error = `Your JSON was invalid (${parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ")}).`;
       }
-      error = parsed.error.issues.slice(0, 5).map((i) => `${i.path.join(".")}: ${i.message}`).join("; ");
     } catch {
-      error = "Response was not valid JSON.";
+      error = "Your response was not valid JSON.";
     }
-    console.warn(`tutor JSON rejected (attempt ${attempt + 1}): ${error}\n${raw.slice(0, 1500)}`);
+    console.warn(`tutor answer rejected (attempt ${attempt + 1}): ${error}\n${raw.slice(0, 800)}`);
     contents = [
       ...contents,
       { role: "model", parts: [{ text: raw }] },
-      { role: "user", parts: [{ text: `Your JSON was invalid (${error}). Reply again with only the corrected JSON object.` }] },
+      { role: "user", parts: [{ text: `${error} Reply again with only the corrected JSON object.` }] },
     ];
   }
+  if (lastUsable) return input.frameJpeg ? groundFrames(lastUsable, input.frameJpeg, model, usage) : { response: lastUsable, model, usage };
 
   return {
     response: {
@@ -247,6 +255,55 @@ function usageOf(meta: { promptTokenCount?: number; candidatesTokenCount?: numbe
 
 export function addUsage(a: Usage, b: Usage): Usage {
   return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens };
+}
+
+/**
+ * Checks that an answer actually teaches: a visual it planned can be shown, questions about the screen
+ * get a visual, and "explain" moves explain rather than handing over a one-liner.
+ */
+function teachingProblem(raw: TutorResponse, enforced: TutorResponse, hasFrame: boolean, question: string): string | null {
+  const asksForVisual = /\b(diagram|graph|draw|picture|plot|visual|show me|sketch)\b/i.test(question);
+  const visuals = (r: TutorResponse) => r.blocks.filter((b) => VISUAL_TYPES.has(b.type));
+  if (!hasFrame && raw.blocks.some((b) => b.type === "frame")) {
+    return 'The paused frame is NOT available, so a "frame" block cannot be shown. Replace it with a visual that reproduces what is on screen from <screen_now> (e.g. a "plot" of the curve with the lines drawn as functions, a "board", or a "diagram"), and make the text explanation complete on its own.';
+  }
+  if (raw.plan.about_screen && visuals(enforced).length === 0 && (raw.plan.visual !== "none" || raw.plan.question_type === "visual" || asksForVisual)) {
+    return 'This question is about a graph/diagram on screen, so the answer must include a visual that reproduces it (e.g. a "plot" with the curve AND every line and point the video draws, a "board", "diagram", or a subject visual). Add it, and keep the explanation.';
+  }
+  const plotIssue = checkPlots(enforced);
+  if (plotIssue) return plotIssue;
+  const words = enforced.blocks
+    .filter((b) => b.type === "text")
+    .map((b) => (b.type === "text" ? b.md : ""))
+    .join(" ")
+    .split(/\s+/).length;
+  if (raw.move === "explain" && words < 45 && !enforced.blocks.some((b) => ["steps", "board"].includes(b.type))) {
+    return 'Your "explain" move barely explains anything. Walk through the idea: what each part of the formula or diagram means and how they connect, in the video\'s notation. A check question can follow the explanation but never replace it.';
+  }
+  return null;
+}
+
+/**
+ * Numerically checks graphs: every marked point should lie on some curve, and every extra line
+ * (secant, tangent, approximation) should pass through at least one marked point.
+ */
+function checkPlots(response: TutorResponse): string | null {
+  for (const b of response.blocks) {
+    if (b.type !== "plot" || !b.points.length || b.functions.length < 2) continue;
+    const fns = b.functions.map((f) => ({ label: f.label ?? f.fn, fn: f.fn, eval: compileExpr(f.fn, ["x"]) }));
+    const near = (f: (typeof fns)[number], p: { x: number; y: number }) => {
+      const y = f.eval?.(p.x);
+      return y !== undefined && Number.isFinite(y) && Math.abs(y - p.y) <= 0.02 * Math.max(1, Math.abs(p.y));
+    };
+    const stray = b.points.find((p) => !fns.some((f) => near(f, p)));
+    if (stray) return `In the plot "${b.title}", the point (${stray.x}, ${stray.y}) is not on any of the drawn functions. Fix the point or the equations.`;
+    const offLine = fns.slice(1).find((f) => f.eval && !b.points.some((p) => near(f, p)));
+    if (offLine) {
+      const values = b.points.map((p) => `at x=${p.x} it gives ${Number(offLine.eval!(p.x).toFixed(3))}, not ${p.y}`).join("; ");
+      return `In the plot "${b.title}", "${offLine.label}" (${offLine.fn}) does not pass through any marked point (${values}). Recompute its equation so it goes through the points it should connect.`;
+    }
+  }
+  return null;
 }
 
 const VISUAL_TYPES = new Set(["frame", "plot", "diagram", "flow", "transform2d", "plot3d", "vector_field", "board", "molecule", "reaction", "free_body", "data_structure"]);

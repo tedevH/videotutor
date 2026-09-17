@@ -22,6 +22,8 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
   const { data: sessions } = await supabase
     .from("sessions")
     .select("id, last_position, updated_at, video_id, videos(title, channel, duration_seconds, provider, thumbnail_url), messages(count)")
+    // Whiteboard sessions have no video and belong on /board, not in the video library.
+    .not("video_id", "is", null)
     .order("updated_at", { ascending: false });
 
   return (
@@ -61,6 +63,7 @@ export default async function LibraryPage({ searchParams }: PageProps<"/library"
               provider: string;
               thumbnail_url: string | null;
             };
+            if (!video) return null;
             const thumbnail = video.thumbnail_url ?? (video.provider === "youtube" ? `https://i.ytimg.com/vi/${s.video_id}/mqdefault.jpg` : null);
             const questions = (s.messages as unknown as { count: number }[])[0]?.count ?? 0;
             const progress = video.duration_seconds ? Math.min(1, s.last_position / video.duration_seconds) : 0;

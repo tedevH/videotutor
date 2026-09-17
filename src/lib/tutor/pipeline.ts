@@ -101,6 +101,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
     context: contextFor(verifiedWork),
     frameJpeg: input.frameJpeg,
     drawingPng: input.drawingPng ?? null,
+    question: input.question,
     timestamp: input.timestamp,
     // Without checked work, a hard question at least gets careful reasoning.
     thinking,
@@ -125,6 +126,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
           context: `${contextFor(verifiedWork)}\n\n<reviewer_corrections>\nA reviewer found these problems in your previous answer. Fix every one; keep what was right.\n${fixes}\n</reviewer_corrections>`,
           frameJpeg: input.frameJpeg,
           drawingPng: input.drawingPng ?? null,
+          question: input.question,
           timestamp: input.timestamp,
           thinking: ThinkingLevel.MEDIUM,
         }).catch((err) => {

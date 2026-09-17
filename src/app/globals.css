@@ -91,3 +91,13 @@ details.faq[open] .faq-plus { transform: rotate(45deg); }
 @media (prefers-reduced-motion: reduce) {
   .demo-camera { transition: none; }
 }
+
+/* Index-card flashcards: ruled lines and a red margin rule */
+.index-card {
+  background-color: #fffefa;
+  background-image:
+    linear-gradient(90deg, transparent 22px, rgba(220, 38, 38, 0.45) 22px, rgba(220, 38, 38, 0.45) 23.5px, transparent 23.5px),
+    linear-gradient(transparent 44px, rgba(220, 38, 38, 0.35) 44px, rgba(220, 38, 38, 0.35) 45px, transparent 45px),
+    repeating-linear-gradient(transparent 0 27px, rgba(37, 99, 235, 0.16) 27px 28px);
+  background-position: 0 0, 0 0, 0 17px;
+}

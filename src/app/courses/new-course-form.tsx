@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { MaterialDropzone, uploadCourseMaterial } from "@/components/courses/material-dropzone";
 
 export function NewCourseForm() {
   const router = useRouter();
@@ -10,6 +11,7 @@ export function NewCourseForm() {
   const [examDate, setExamDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [files, setFiles] = useState<{ file: File; kind: string }[]>([]);
 
   return (
     <form
@@ -20,8 +22,14 @@ export function NewCourseForm() {
         setError(null);
         const res = await fetch("/api/courses", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title, subject, examDate }) });
         const data = await res.json();
-        setSaving(false);
-        if (!res.ok) return setError(data.error);
+        if (!res.ok) {
+          setSaving(false);
+          return setError(data.error);
+        }
+        // Upload anything dropped in before creating, so the course map starts building right away.
+        for (const f of files) {
+          await uploadCourseMaterial(data.courseId, f.file, f.kind).catch((err) => console.error("upload failed", f.file.name, err));
+        }
         router.push(`/courses/${data.courseId}`);
       }}
     >
@@ -38,9 +46,15 @@ export function NewCourseForm() {
         Next exam (optional)
         <input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} className="mt-1 w-full rounded-lg border border-ink/20 bg-white px-3 py-2" />
       </label>
+      <div className="mt-3 text-sm">
+        <p>Syllabus &amp; materials (optional)</p>
+        <div className="mt-1">
+          <MaterialDropzone courseId={null} compact hint="Drop your syllabus here" onPick={setFiles} />
+        </div>
+      </div>
       {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
       <button disabled={saving} className="mt-4 w-full rounded-xl bg-ink py-2.5 font-medium text-white disabled:opacity-60">
-        {saving ? "Creating…" : "Create course"}
+        {saving ? (files.length ? "Creating & uploading…" : "Creating…") : "Create course"}
       </button>
     </form>
   );

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { MaterialDropzone } from "@/components/courses/material-dropzone";
 import type { PlanDay } from "@/lib/courses/plan";
 import { formatTime } from "@/lib/youtube";
 
@@ -28,34 +28,20 @@ const LEVEL_STYLE: Record<string, string> = {
   mastered: "bg-green-100 text-green-900",
 };
 
-const KINDS = [
-  ["syllabus", "Syllabus"],
-  ["slides", "Slides (PDF)"],
-  ["notes", "Notes"],
-  ["textbook", "Textbook pages"],
-  ["homework", "Homework"],
-  ["exam", "Practice exam"],
-  ["other", "Other"],
-] as const;
-
 export function CourseView({
   course,
   materials,
   units,
   concepts,
   plan,
-  userId,
 }: {
   course: { id: string; title: string; subject: string | null; exam_date: string | null };
   materials: Material[];
   units: { id: string; title: string; summary: string | null }[];
   concepts: Concept[];
   plan: { daysLeft: number | null; days: PlanDay[]; focus: { conceptId: string; name: string; reason: string }[] };
-  userId: string;
 }) {
   const router = useRouter();
-  const [kind, setKind] = useState("syllabus");
-  const [uploading, setUploading] = useState(false);
   const [videoUrl, setVideoUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [examDate, setExamDate] = useState(course.exam_date ?? "");
@@ -67,27 +53,6 @@ export function CourseView({
     const t = setInterval(() => router.refresh(), 6000);
     return () => clearInterval(t);
   }, [working, router]);
-
-  async function upload(file: File) {
-    setUploading(true);
-    setError(null);
-    const safeName = file.name.replace(/[^a-zA-Z0-9._-]+/g, "_");
-    const path = `${userId}/${course.id}/${crypto.randomUUID()}-${safeName}`;
-    const { error: uploadError } = await createClient().storage.from("materials").upload(path, file, { contentType: file.type });
-    if (uploadError) {
-      setUploading(false);
-      return setError(uploadError.message);
-    }
-    const res = await fetch(`/api/courses/${course.id}/materials`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ storagePath: path, kind, title: file.name, mimeType: file.type || (file.name.endsWith(".md") ? "text/markdown" : "") }),
-    });
-    const data = await res.json();
-    setUploading(false);
-    if (!res.ok) return setError(data.error);
-    router.refresh();
-  }
 
   async function addVideo() {
     setError(null);
@@ -238,30 +203,10 @@ export function CourseView({
           <aside className="space-y-5">
             <section className="rounded-3xl border border-ink/10 bg-white p-5">
               <h2 className="text-lg font-semibold">Add material</h2>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <select value={kind} onChange={(e) => setKind(e.target.value)} className="rounded-lg border border-ink/15 bg-white px-2 py-2 text-sm">
-                  {KINDS.map(([value, label]) => (
-                    <option key={value} value={value}>
-                      {label}
-                    </option>
-                  ))}
-                </select>
-                <label className={`cursor-pointer rounded-lg px-3 py-2 text-sm font-medium text-white ${uploading ? "bg-ink/50" : "bg-ink"}`}>
-                  {uploading ? "Uploading…" : "Choose file"}
-                  <input
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp,.txt,.md"
-                    className="hidden"
-                    disabled={uploading}
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) void upload(f);
-                      e.target.value = "";
-                    }}
-                  />
-                </label>
+              <p className="mt-1 text-sm text-muted">{materials.length ? "Add more to sharpen your course map and study plan." : "Start with your syllabus: Lumo maps every topic and your exam dates from it."}</p>
+              <div className="mt-3">
+                <MaterialDropzone courseId={course.id} onUploaded={() => router.refresh()} />
               </div>
-              <p className="mt-2 text-xs text-muted">PDF, images or text, up to 18 MB. Export slides to PDF first.</p>
 
               <div className="mt-4 flex gap-2">
                 <input
