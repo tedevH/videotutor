@@ -4,7 +4,7 @@ import { AppNav } from "@/components/app-nav";
 import { listConceptsWithMastery } from "@/lib/brain/store";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Lumo Brain · LumoTutor" };
+export const metadata = { title: "Lumo Brain" };
 
 const LEVEL_COLOR: Record<string, string> = {
   new: "bg-stone-300",

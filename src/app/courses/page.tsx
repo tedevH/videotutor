@@ -4,7 +4,7 @@ import { listConceptsWithMastery } from "@/lib/brain/store";
 import { createClient } from "@/lib/supabase/server";
 import { NewCourseForm } from "./new-course-form";
 
-export const metadata = { title: "Courses · LumoTutor" };
+export const metadata = { title: "Courses" };
 
 export default async function CoursesPage() {
   const supabase = await createClient();

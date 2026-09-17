@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { AddVideoForm } from "@/components/add-video-form";
 import { PricingCards } from "@/components/pricing-cards";
 import { DemoVideo } from "@/components/landing/demo-video";
+import { SITE } from "@/lib/site";
 import { FeatureGrid } from "@/components/landing/feature-grid";
 import { StaticDiagrams } from "@/components/landing/static-diagrams";
 import { SubjectFlashcards } from "@/components/landing/subject-flashcards";
@@ -286,7 +287,21 @@ export default async function Home() {
 
       <footer className="mx-auto mt-24 flex w-full max-w-6xl flex-wrap items-center justify-between gap-3 border-t border-ink/15 px-4 py-8 text-sm text-muted sm:px-6">
         <span className="font-semibold text-ink">LumoTutor</span>
-        <span>© 2026 LumoTutor</span>
+        <nav className="flex flex-wrap items-center gap-4">
+          <Link href="/pricing" className="hover:text-ink">
+            Pricing
+          </Link>
+          <Link href="/terms" className="hover:text-ink">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-ink">
+            Privacy
+          </Link>
+          <a href={`mailto:${SITE.supportEmail}`} className="hover:text-ink">
+            Contact
+          </a>
+        </nav>
+        <span>© {new Date().getFullYear()} LumoTutor</span>
       </footer>
     </main>
   );

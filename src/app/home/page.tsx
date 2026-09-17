@@ -12,7 +12,7 @@ import { createClient } from "@/lib/supabase/server";
 import { usageSummary } from "@/lib/usage";
 import { formatTime } from "@/lib/youtube";
 
-export const metadata = { title: "Home · LumoTutor" };
+export const metadata = { title: "Home" };
 
 export default async function HomePage({ searchParams }: PageProps<"/home">) {
   const { upgraded } = await searchParams;

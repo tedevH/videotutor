@@ -4,7 +4,7 @@ import { AppNav } from "@/components/app-nav";
 import { AssignmentDropzone } from "@/components/homework/assignment-dropzone";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Homework · LumoTutor" };
+export const metadata = { title: "Homework" };
 
 const STATUS_STYLE: Record<string, string> = {
   ready: "bg-green-100 text-green-900",

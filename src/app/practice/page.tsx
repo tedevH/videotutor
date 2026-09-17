@@ -3,7 +3,7 @@ import { listConceptsWithMastery } from "@/lib/brain/store";
 import { createClient } from "@/lib/supabase/server";
 import { PracticeView } from "./practice-view";
 
-export const metadata = { title: "Practice · LumoTutor" };
+export const metadata = { title: "Practice" };
 
 export default async function PracticePage({ searchParams }: PageProps<"/practice">) {
   const { concept, course, topic, review } = await searchParams;

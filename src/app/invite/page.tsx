@@ -4,7 +4,7 @@ import { InviteFriends } from "@/components/invite-friends";
 import { REFERRAL } from "@/lib/plans";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Invite friends · LumoTutor" };
+export const metadata = { title: "Invite friends" };
 
 export default async function InvitePage() {
   const supabase = await createClient();

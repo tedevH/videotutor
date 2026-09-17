@@ -4,7 +4,7 @@ import { buildStudyPlan } from "@/lib/courses/plan";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
 import { CourseView } from "./course-view";
 
-export const metadata = { title: "Course · LumoTutor" };
+export const metadata = { title: "Course" };
 
 export default async function CoursePage({ params }: PageProps<"/courses/[id]">) {
   const { id } = await params;

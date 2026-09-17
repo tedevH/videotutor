@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ResetPasswordForm } from "./reset-form";
 
-export const metadata = { title: "Set a password · LumoTutor" };
+export const metadata = { title: "Set a password" };
 
 /** Reached from the reset email (the callback already signed the user in). */
 export default async function ResetPasswordPage() {

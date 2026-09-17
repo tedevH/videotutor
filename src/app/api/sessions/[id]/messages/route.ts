@@ -2,6 +2,7 @@ import { after, NextResponse } from "next/server";
 import { lastTutorReply, learnFromTurn } from "@/lib/brain/observe";
 import { studentModelSummary } from "@/lib/brain/profile";
 import { signFrameUrls, uploadFrame } from "@/lib/frames";
+import { qualifyReferral } from "@/lib/referrals";
 import { mediaForVideo, VIDEO_MEDIA_COLUMNS, type VideoRow } from "@/lib/media";
 import { planFor } from "@/lib/entitlements";
 import { PLANS } from "@/lib/plans";
@@ -174,6 +175,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .from("sessions")
       .update({ last_position: Math.floor(timestamp), updated_at: new Date().toISOString() })
       .eq("id", sessionId),
+    // An invite pays out once the friend actually uses Lumo, not merely signs up.
+    qualifyReferral(user.id).catch((err) => console.error("referral qualify failed", err)),
     db.from("usage_events").insert({
       user_id: user.id,
       kind: "tutor",

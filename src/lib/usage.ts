@@ -22,7 +22,7 @@ export async function usageSummary(userId: string, plan: PlanId): Promise<UsageM
     db.from("usage_events").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("kind", "tutor").gte("created_at", dayAgo()),
     db.from("practice_items").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", dayAgo()),
     db.from("sessions").select("video_id, videos(duration_seconds)").eq("user_id", userId).not("video_id", "is", null).gte("created_at", startOfMonth()),
-    db.from("assignments").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", startOfMonth()),
+    db.from("assignments").select("id", { count: "exact", head: true }).eq("user_id", userId).gt("page_count", 0).gte("created_at", startOfMonth()),
   ]);
 
   const meters: UsageMeter[] = [

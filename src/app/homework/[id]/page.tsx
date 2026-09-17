@@ -5,7 +5,7 @@ import { createAdminClient, createClient } from "@/lib/supabase/server";
 import type { StoredMessage } from "@/lib/tutor/schema";
 import { HomeworkView } from "./homework-view";
 
-export const metadata = { title: "Homework · LumoTutor" };
+export const metadata = { title: "Homework" };
 
 const PAGE_URL_TTL = 60 * 60 * 6;
 

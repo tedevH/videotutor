@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { StoredMessage } from "@/lib/tutor/schema";
 import { BoardView } from "./board-view";
 
-export const metadata = { title: "Whiteboard · LumoTutor" };
+export const metadata = { title: "Whiteboard" };
 
 export default async function BoardPage({ params }: PageProps<"/board/[sessionId]">) {
   const { sessionId } = await params;

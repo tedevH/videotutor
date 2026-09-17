@@ -24,10 +24,14 @@ const startOfMonth = () => {
 export async function assignmentAllowanceError(userId: string, plan: PlanId) {
   const limit = limitsFor(plan).assignmentsPerMonth;
   if (limit === null) return null;
-  const { count } = await createAdminClient()
+  const db = createAdminClient();
+  // A failed upload leaves an assignment with no pages; it shouldn't cost the student an upload.
+  await db.from("assignments").delete().eq("user_id", userId).eq("page_count", 0).lt("created_at", new Date(Date.now() - 600_000).toISOString());
+  const { count } = await db
     .from("assignments")
     .select("id", { count: "exact", head: true })
     .eq("user_id", userId)
+    .gt("page_count", 0)
     .gte("created_at", startOfMonth());
   if ((count ?? 0) < limit) return null;
   return plan === "free"

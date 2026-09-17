@@ -4,7 +4,7 @@ import { PricingCards } from "@/components/pricing-cards";
 import { effectivePlan } from "@/lib/entitlements";
 import { createClient } from "@/lib/supabase/server";
 
-export const metadata = { title: "Pricing · LumoTutor" };
+export const metadata = { title: "Pricing" };
 
 export default async function PricingPage() {
   const supabase = await createClient();
