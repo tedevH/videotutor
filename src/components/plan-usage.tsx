@@ -26,7 +26,7 @@ export function PlanUsage({ plan, meters, trialUntil }: { plan: PlanId; meters: 
           const pct = Math.min(m.used / m.limit, 1);
           const left = Math.max(m.limit - m.used, 0);
           return (
-            <li key={m.label}>
+            <li key={`${m.label}-${m.unit}`}>
               <div className="flex items-baseline justify-between text-xs">
                 <span className="font-medium text-ink/80">{m.label}</span>
                 <span className={pct >= 1 ? "font-semibold text-red-600" : "text-muted"}>

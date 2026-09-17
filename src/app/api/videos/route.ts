@@ -16,6 +16,6 @@ export async function POST(request: Request) {
   const { url } = (await request.json()) as { url?: string };
   const result = await addVideo(supabase, user.id, url ?? "");
   if ("error" in result) return NextResponse.json({ error: result.error }, { status: result.status });
-  if (result.needsIngest) after(() => ingestVideo(result.videoId));
+  if (result.needsIngest) after(() => ingestVideo(result.videoId, user.id));
   return NextResponse.json({ sessionId: result.sessionId });
 }

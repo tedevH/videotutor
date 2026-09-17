@@ -55,7 +55,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   // Homework sessions: the page the student is on, and the problems printed on it.
   const worksheet = session.assignment_id ? await worksheetContext(supabase, session.assignment_id, Math.max(1, Math.floor(body.page ?? 1))) : null;
   const db = createAdminClient();
-  const [entitlement, { count: usedToday }] = await Promise.all([
+  const monthStart = new Date();
+  const startOfMonth = new Date(Date.UTC(monthStart.getUTCFullYear(), monthStart.getUTCMonth(), 1)).toISOString();
+  const [entitlement, { count: usedToday }, { count: usedThisMonth }] = await Promise.all([
     planFor(user.id),
     db
       .from("usage_events")
@@ -63,7 +65,21 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       .eq("user_id", user.id)
       .eq("kind", "tutor")
       .gte("created_at", new Date(Date.now() - 86_400_000).toISOString()),
+    db.from("usage_events").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("kind", "tutor").gte("created_at", startOfMonth),
   ]);
+  const monthlyLimit = entitlement.limits.tutorQuestionsPerMonth;
+  if ((usedThisMonth ?? 0) >= monthlyLimit) {
+    return NextResponse.json(
+      {
+        error:
+          entitlement.plan === "pro"
+            ? `You've asked ${monthlyLimit} questions this month, which is the Pro ceiling. It resets on the 1st — email tedevh8@gmail.com if you need more.`
+            : `You've used this month's ${monthlyLimit} questions. ${entitlement.plan === "free" ? "Plus includes 600 a month, or invite 2 friends to unlock 14 days of Plus." : "Pro includes 1,500 a month."} Your allowance resets on the 1st.`,
+        upgrade: entitlement.plan !== "pro",
+      },
+      { status: 429 },
+    );
+  }
   const limit = entitlement.limits.tutorQuestionsPerDay;
   if ((usedToday ?? 0) >= limit) {
     return NextResponse.json(

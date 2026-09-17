@@ -114,12 +114,14 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
   }
 
   const thinking = hard && !verifiedWork ? ThinkingLevel.HIGH : ThinkingLevel.LOW;
+  // The premium model costs ~4x; spend it on the hard questions, not "what does dx mean".
+  const answerModel = hard ? input.tutorModel : undefined;
   let answer = await askTutor(SYSTEM_PROMPT, {
     context: contextFor(verifiedWork),
     frameJpeg: input.frameJpeg,
     drawingPng: input.drawingPng ?? null,
     question: input.question,
-    model: input.tutorModel,
+    model: answerModel,
     timestamp: input.timestamp,
     surface: input.surface ?? "video",
     // Without checked work, a hard question at least gets careful reasoning.
@@ -146,7 +148,7 @@ export async function runTutor(input: TutorInput): Promise<TutorRun> {
           frameJpeg: input.frameJpeg,
           drawingPng: input.drawingPng ?? null,
           question: input.question,
-          model: input.tutorModel,
+          model: answerModel,
           timestamp: input.timestamp,
           surface: input.surface ?? "video",
           thinking: ThinkingLevel.MEDIUM,

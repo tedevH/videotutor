@@ -1,5 +1,6 @@
 import { GoogleGenAI, ThinkingLevel, type Part } from "@google/genai";
 import { z } from "zod";
+import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
 
 const model = () => process.env.GEMINI_TUTOR_MODEL || process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -56,6 +57,7 @@ export async function extractWorksheet(opts: {
   title: string;
   pages: { page: number; data: Buffer; mimeType: string }[];
   existingConcepts: string[];
+  userId?: string;
 }): Promise<WorksheetExtraction> {
   const parts: Part[] = [];
   for (const p of opts.pages) {
@@ -89,5 +91,6 @@ ${opts.existingConcepts.length ? `Reuse these concept names exactly when the sam
       },
     }),
   );
+  await recordUsage(opts.userId ?? null, "homework", model(), usageFrom(res.usageMetadata));
   return worksheetExtraction.parse(JSON.parse(res.text ?? "{}"));
 }

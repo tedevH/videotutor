@@ -78,6 +78,7 @@ async function planNext(userId: string, conceptId: string) {
 export async function createNextItem(userId: string, conceptId: string): Promise<PracticeItem> {
   const plan = await planNext(userId, conceptId);
   const draft = await generateProblem({
+    userId,
     concept: plan.concept.name,
     subject: plan.concept.subject,
     description: plan.concept.description,
@@ -158,7 +159,7 @@ export async function hintsUsed(userId: string, itemId: string) {
 
 export async function submitAttempt(userId: string, item: PracticeItem, answer: string) {
   const db = createAdminClient();
-  const [grade, hints] = await Promise.all([gradeAttempt(item, answer), hintsUsed(userId, item.id)]);
+  const [grade, hints] = await Promise.all([gradeAttempt(item, answer, userId), hintsUsed(userId, item.id)]);
   const correct = grade.result === "correct";
 
   await db.from("practice_attempts").insert({

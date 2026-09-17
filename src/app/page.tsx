@@ -51,7 +51,7 @@ const FAQS = [
   },
   {
     q: "Is it free?",
-    a: "Yes, the Free plan includes 2 lectures a month, a basic tutor and 5 practice problems a day. Plus ($9.99/month or $79.99/year) unlocks 25 hours of lectures, voice tutoring, diagrams, adaptive practice, memory and exam prep. Pro ($19.99/month) is for heavy course loads. Invite 2 friends and you get 14 days of Plus free.",
+    a: "Yes. Free includes 2 lectures a month, 100 tutor questions and 40 practice problems. Plus ($9.99/month or $79.99/year) unlocks 25 hours of lectures, 600 questions a month, voice tutoring, diagrams, adaptive practice, memory and exam prep. Pro ($19.99/month) doubles that and uses the strongest models on hard problems. Invite 2 friends and you get 14 days of Plus free.",
   },
   {
     q: "Who can see my questions?",

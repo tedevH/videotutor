@@ -57,7 +57,7 @@ export async function lectureAllowanceError(userId: string, plan: PlanId) {
     const hours = added.reduce((n, s) => n + ((s.videos as unknown as { duration_seconds: number | null } | null)?.duration_seconds ?? 0), 0) / 3600;
     if (hours >= limits.lectureHoursPerMonth) {
       return plan === "plus"
-        ? `You've used this month's ${limits.lectureHoursPerMonth} hours of lectures. Pro includes 100+ hours.`
+        ? `You've used this month's ${limits.lectureHoursPerMonth} hours of lectures. Pro includes 50 hours.`
         : `You've used this month's ${limits.lectureHoursPerMonth} hours of lectures. It resets on the 1st.`;
     }
   }

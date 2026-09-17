@@ -33,6 +33,7 @@ export async function processMaterial(userId: string, materialId: string) {
       file,
       existingConcepts: (existing ?? []).map((c) => c.name),
       today: new Date().toISOString().slice(0, 10),
+      userId,
     });
     await mergeIntoCourse(userId, material.course_id, extraction, { materialId });
     await db.from("course_materials").update({ status: "ready", summary: extraction.summary }).eq("id", materialId);
@@ -103,7 +104,7 @@ export async function mergeIntoCourse(userId: string, courseId: string, extracti
 export async function linkVideoToCourse(userId: string, courseId: string, videoId: string) {
   const db = createAdminClient();
   try {
-    await ingestVideo(videoId);
+    await ingestVideo(videoId, userId);
     // Another request may be analyzing the same video; wait for it.
     for (let i = 0; i < 50; i++) {
       const { data: v } = await db.from("videos").select("index_status").eq("id", videoId).single();

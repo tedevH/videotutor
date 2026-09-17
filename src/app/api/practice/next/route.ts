@@ -22,10 +22,22 @@ export async function POST(request: Request) {
   if (!conceptId) return NextResponse.json({ error: "Tell Lumo what to practice, or ask a few questions in a video first." }, { status: 400 });
 
   const db = createAdminClient();
-  const [{ plan, limits }, { count: todayCount }] = await Promise.all([
+  const now = new Date();
+  const startOfMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString();
+  const [{ plan, limits }, { count: todayCount }, { count: monthCount }] = await Promise.all([
     planFor(user.id),
     db.from("practice_items").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", new Date(Date.now() - 86_400_000).toISOString()),
+    db.from("practice_items").select("id", { count: "exact", head: true }).eq("user_id", user.id).gte("created_at", startOfMonth),
   ]);
+  if ((monthCount ?? 0) >= limits.practiceProblemsPerMonth) {
+    return NextResponse.json(
+      {
+        error: `You've done this month's ${limits.practiceProblemsPerMonth} practice problems. ${plan === "pro" ? "That's the Pro ceiling." : "Upgrade for more."} Resets on the 1st.`,
+        upgrade: plan !== "pro",
+      },
+      { status: 429 },
+    );
+  }
   const { data: concept } = await db.from("concepts").select("name").eq("id", conceptId).eq("user_id", user.id).maybeSingle();
   if (!concept) return NextResponse.json({ error: "Concept not found" }, { status: 404 });
 

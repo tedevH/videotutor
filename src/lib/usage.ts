@@ -18,16 +18,20 @@ export async function usageSummary(userId: string, plan: PlanId): Promise<UsageM
   const limits = limitsFor(plan);
   const db = createAdminClient();
 
-  const [{ count: questions }, { count: practice }, { data: lectures }, { count: assignments }] = await Promise.all([
+  const [{ count: questions }, { count: practice }, { data: lectures }, { count: assignments }, { count: questionsMonth }, { count: practiceMonth }] = await Promise.all([
     db.from("usage_events").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("kind", "tutor").gte("created_at", dayAgo()),
     db.from("practice_items").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", dayAgo()),
     db.from("sessions").select("video_id, videos(duration_seconds)").eq("user_id", userId).not("video_id", "is", null).gte("created_at", startOfMonth()),
     db.from("assignments").select("id", { count: "exact", head: true }).eq("user_id", userId).gt("page_count", 0).gte("created_at", startOfMonth()),
+    db.from("usage_events").select("id", { count: "exact", head: true }).eq("user_id", userId).eq("kind", "tutor").gte("created_at", startOfMonth()),
+    db.from("practice_items").select("id", { count: "exact", head: true }).eq("user_id", userId).gte("created_at", startOfMonth()),
   ]);
 
   const meters: UsageMeter[] = [
     { label: "Tutor questions", used: questions ?? 0, limit: limits.tutorQuestionsPerDay, unit: "today", resets: "resets every 24 hours" },
+    { label: "Tutor questions", used: questionsMonth ?? 0, limit: limits.tutorQuestionsPerMonth, unit: "this month", resets: "resets on the 1st" },
     { label: "Practice problems", used: practice ?? 0, limit: limits.practiceProblemsPerDay, unit: "today", resets: "resets every 24 hours" },
+    { label: "Practice problems", used: practiceMonth ?? 0, limit: limits.practiceProblemsPerMonth, unit: "this month", resets: "resets on the 1st" },
   ];
 
   const added = lectures ?? [];

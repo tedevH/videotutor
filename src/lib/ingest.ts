@@ -1,3 +1,4 @@
+import { recordUsage } from "@/lib/ai/meter";
 import { createAdminClient } from "@/lib/supabase/server";
 import { indexVideo } from "@/lib/ai/gemini";
 import { uploadVideoFile, type Media } from "@/lib/media";
@@ -9,7 +10,7 @@ const CAPTION_CHUNK_SECONDS = 40;
  * Builds the shared index for a video. Captions are stored first so the tutor is
  * usable within seconds; Gemini's visual index replaces them when it finishes.
  */
-export async function ingestVideo(videoId: string) {
+export async function ingestVideo(videoId: string, userId?: string) {
   const db = createAdminClient();
 
   // Claim the job so concurrent requests don't index the same video twice.
@@ -56,12 +57,7 @@ export async function ingestVideo(videoId: string) {
     const fillers = transcript ? captionChunks(videoId, transcript).filter((c) => !covered(c.start_seconds, c.end_seconds)) : [];
     await replaceChunks(videoId, [...visualChunks, ...fillers].sort((a, b) => a.start_seconds - b.start_seconds));
     await db.from("videos").update({ index_status: "ready", summary: index.summary }).eq("id", videoId);
-    await db.from("usage_events").insert({
-      kind: "ingest",
-      model: process.env.GEMINI_MODEL || "gemini-3.5-flash-lite",
-      input_tokens: inputTokens,
-      output_tokens: outputTokens,
-    });
+    await recordUsage(userId ?? null, "ingest", process.env.GEMINI_MODEL || "gemini-3.5-flash-lite", { inputTokens, outputTokens });
   } catch (err) {
     console.error("ingest failed", videoId, err);
     await db

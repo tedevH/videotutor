@@ -1,4 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
 import { repairLatex } from "@/lib/tutor/latex-repair";
 import { extractJson, gradeResult, type GradeResult, type PracticeItem } from "./schema";
@@ -6,7 +7,7 @@ import { extractJson, gradeResult, type GradeResult, type PracticeItem } from ".
 const model = () => process.env.GEMINI_SOLVER_MODEL || process.env.GEMINI_TUTOR_MODEL || process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
 
 /** Grades a student's answer and diagnoses the specific misconception behind a wrong one. */
-export async function gradeAttempt(item: PracticeItem, answer: string): Promise<GradeResult> {
+export async function gradeAttempt(item: PracticeItem, answer: string, userId?: string): Promise<GradeResult> {
   const prompt = `Grade a student's answer to a practice problem. Be fair: accept equivalent forms (simplified or not, different but equal expressions, reasonable rounding, any valid scalar multiple for eigenvectors, etc.).
 If equivalence of expressions or numbers is not obvious, check it with Python (sympy).
 
@@ -40,6 +41,7 @@ End with a JSON code block:
       config: { tools: [{ codeExecution: {} }], temperature: 0.1, maxOutputTokens: 3000, thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM } },
     }),
   );
+  await recordUsage(userId ?? null, "practice", model(), usageFrom(res.usageMetadata));
   const text = (res.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("\n");
   return gradeResult.parse(repairLatex(extractJson(text)));
 }

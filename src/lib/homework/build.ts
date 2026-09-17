@@ -39,6 +39,7 @@ export async function processAssignment(userId: string, assignmentId: string) {
       title: assignment.title,
       pages,
       existingConcepts: (existing ?? []).map((c) => c.name),
+      userId,
     });
 
     for (const p of extraction.page_text) {

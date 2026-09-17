@@ -9,9 +9,12 @@ export type PlanLimits = {
   lecturesPerMonth: number | null;
   lectureHoursPerMonth: number | null;
   tutorQuestionsPerDay: number;
+  /** The real bound on cost: a daily cap alone allows 30x that every month. */
+  tutorQuestionsPerMonth: number;
   /** Homework/quizzes uploaded per month; null is unlimited. */
   assignmentsPerMonth: number | null;
   practiceProblemsPerDay: number;
+  practiceProblemsPerMonth: number;
   voice: boolean;
   /** Code-checked solving and answer review for hard questions. */
   verifiedMath: boolean;
@@ -37,15 +40,17 @@ export const PLANS: Record<
       lecturesPerMonth: 2,
       lectureHoursPerMonth: null,
       tutorQuestionsPerDay: 15,
+      tutorQuestionsPerMonth: 100,
       assignmentsPerMonth: 1,
       practiceProblemsPerDay: 5,
+      practiceProblemsPerMonth: 40,
       voice: false,
       verifiedMath: false,
       examPrep: false,
       bestModels: false,
     },
-    features: ["2 lectures a month", "15 tutor questions a day",
-      "1 homework upload a month", "5 practice problems a day", "Basic learning memory", "Whiteboard and courses"],
+    features: ["2 lectures a month", "100 tutor questions a month (15 a day)",
+      "1 homework upload a month", "40 practice problems a month", "Basic learning memory", "Whiteboard and courses"],
   },
   plus: {
     name: "Plus",
@@ -54,8 +59,10 @@ export const PLANS: Record<
       lecturesPerMonth: null,
       lectureHoursPerMonth: 25,
       tutorQuestionsPerDay: 150,
+      tutorQuestionsPerMonth: 600,
       assignmentsPerMonth: 20,
       practiceProblemsPerDay: 60,
+      practiceProblemsPerMonth: 400,
       voice: true,
       verifiedMath: true,
       examPrep: true,
@@ -63,8 +70,8 @@ export const PLANS: Record<
     },
     features: [
       "25 hours of lectures a month",
-      "150 tutor questions a day",
-      "60 practice problems a day",
+      "600 tutor questions a month (150 a day)",
+      "400 practice problems a month",
       "20 homework or quiz uploads a month",
       "Code-verified answers on hard problems",
       "Voice tutoring",
@@ -81,19 +88,21 @@ export const PLANS: Record<
     tagline: "For heavy course loads and exam season.",
     limits: {
       lecturesPerMonth: null,
-      lectureHoursPerMonth: 100,
+      lectureHoursPerMonth: 50,
       tutorQuestionsPerDay: 400,
+      tutorQuestionsPerMonth: 1000,
       assignmentsPerMonth: null,
       practiceProblemsPerDay: 200,
+      practiceProblemsPerMonth: 700,
       voice: true,
       verifiedMath: true,
       examPrep: true,
       bestModels: true,
     },
     features: [
-      "100 hours of lectures a month",
-      "400 tutor questions a day",
-      "200 practice problems a day",
+      "50 hours of lectures a month",
+      "1,000 tutor questions a month (400 a day)",
+      "700 practice problems a month",
       "Unlimited homework uploads",
       "Everything in Plus",
       "Highest-quality AI models",

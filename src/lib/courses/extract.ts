@@ -1,5 +1,6 @@
 import { GoogleGenAI, ThinkingLevel, type Part } from "@google/genai";
 import { z } from "zod";
+import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
 
 const model = () => process.env.GEMINI_TUTOR_MODEL || process.env.GEMINI_MODEL || "gemini-3.5-flash-lite";
@@ -84,6 +85,7 @@ export async function extractCourseStructure(opts: {
   file: { data: Buffer; mimeType: string } | { text: string };
   existingConcepts: string[];
   today: string;
+  userId?: string;
 }): Promise<CourseExtraction> {
   const parts: Part[] = [];
   if ("text" in opts.file) parts.push({ text: opts.file.text.slice(0, 200_000) });
@@ -116,6 +118,7 @@ ${opts.existingConcepts.length ? `The course already has these concepts; reuse t
       },
     }),
   );
+  await recordUsage(opts.userId ?? null, "course", model(), usageFrom(res.usageMetadata));
   return courseExtraction.parse(JSON.parse(res.text ?? "{}"));
 }
 

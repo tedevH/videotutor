@@ -1,4 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
 import type { Difficulty } from "@/lib/brain/model";
 import { repairLatex } from "@/lib/tutor/latex-repair";
@@ -34,6 +35,7 @@ export async function generateProblem(opts: {
   misconception?: string | null;
   recentPrompts: string[];
   level: string;
+  userId?: string;
 }): Promise<ProblemDraft> {
   const prompt = `Write ONE practice problem for a ${opts.level === "high_school" ? "high school" : "college"} student.
 
@@ -65,6 +67,7 @@ End your reply with the final problem as a JSON code block:
       },
     }),
   );
+  await recordUsage(opts.userId ?? null, "practice", model(), usageFrom(res.usageMetadata));
   const text = (res.candidates?.[0]?.content?.parts ?? []).map((p) => p.text ?? "").join("\n");
   return problemDraft.parse(repairLatex(extractJson(text)));
 }
