@@ -1,5 +1,5 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel } from "@google/genai";
-import { withRetry } from "@/lib/ai/retry";
+import { withModelFallback } from "@/lib/ai/retry";
 import type { Usage } from "@/lib/ai/tutor";
 import type { Block, FrameAnnotation } from "@/lib/tutor/schema";
 
@@ -21,9 +21,9 @@ export async function groundFrameBlock(
   const targets = [...new Set([...block.annotations.map((a) => a.target), block.focus].filter((t): t is string => !!t))];
   if (!targets.length) return { block, usage: { inputTokens: 0, outputTokens: 0 } };
 
-  const res = await withRetry(() =>
+  const res = await withModelFallback(model, (m) =>
     new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! }).models.generateContent({
-      model,
+      model: m,
       contents: [
         {
           role: "user",

@@ -1,5 +1,5 @@
 import { GoogleGenAI, MediaResolution, ThinkingLevel, Type } from "@google/genai";
-import { withRetry } from "@/lib/ai/retry";
+import { withModelFallback } from "@/lib/ai/retry";
 import { videoIndex, type VideoIndex } from "@/lib/tutor/schema";
 import type { Media } from "@/lib/media";
 import type { TranscriptLine } from "@/lib/youtube";
@@ -58,8 +58,8 @@ export async function indexVideo(
   for (let s = 0; s < total; s += SEGMENT_SECONDS) segments.push([s, Math.min(s + SEGMENT_SECONDS, total)]);
 
   const results = await mapLimit(segments, SEGMENT_CONCURRENCY, async ([from, to]) => {
-      const res = await withRetry(() => ai.models.generateContent({
-        model: model(),
+      const res = await withModelFallback(model(), (m) => ai.models.generateContent({
+        model: m,
         contents: [
           {
             role: "user",

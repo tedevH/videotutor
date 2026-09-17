@@ -1,7 +1,7 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel, type Part } from "@google/genai";
 import { groundFrameBlock } from "@/lib/ai/ground";
 import { repairLatex } from "@/lib/tutor/latex-repair";
-import { withRetry } from "@/lib/ai/retry";
+import { withModelFallback } from "@/lib/ai/retry";
 import type { Media } from "@/lib/media";
 import { momentJsonSchema, tutorJsonSchema } from "@/lib/tutor/json-schema";
 import { moment, tutorResponse, type Moment, type TutorResponse } from "@/lib/tutor/schema";
@@ -67,9 +67,9 @@ Report as JSON:
 - needs_proof_or_derivation: true if the answer should walk through a derivation, proof, or multi-step argument.`,
   });
 
-  const res = await withRetry(() =>
+  const res = await withModelFallback(tutorModel(), (m) =>
     client().models.generateContent({
-      model: tutorModel(),
+      model: m,
       contents: [{ role: "user", parts }],
       config: {
         temperature: 0.1,
@@ -92,9 +92,9 @@ export function needsSolving(m: Moment) {
  * execution, so every number and symbolic result in the final answer has been checked.
  */
 export async function solveWithCode(system: string, context: string) {
-  const res = await withRetry(() =>
+  const res = await withModelFallback(process.env.GEMINI_SOLVER_MODEL || tutorModel(), (m) =>
     client().models.generateContent({
-      model: process.env.GEMINI_SOLVER_MODEL || tutorModel(),
+      model: m,
       contents: [{ role: "user", parts: [{ text: context }] }],
       config: {
         systemInstruction: system,
@@ -132,9 +132,9 @@ export async function askTutor(
 
   // Structured output guarantees valid JSON; one repair attempt covers schema details Zod rejects.
   for (let attempt = 0; attempt < 2; attempt++) {
-    const res = await withRetry(() =>
+    const res = await withModelFallback(model, (m) =>
       client().models.generateContent({
-        model,
+        model: m,
         contents,
         config: {
           systemInstruction: system,
@@ -207,9 +207,9 @@ async function groundFrames(response: TutorResponse, frameJpeg: string, model: s
 
 /** Pass 4 (hard questions only): catch false or misleading claims the code checks can't see. */
 export async function reviewAnswer(system: string, context: string, answer: TutorResponse) {
-  const res = await withRetry(() =>
+  const res = await withModelFallback(process.env.GEMINI_SOLVER_MODEL || tutorModel(), (m) =>
     client().models.generateContent({
-      model: process.env.GEMINI_SOLVER_MODEL || tutorModel(),
+      model: m,
       contents: [{ role: "user", parts: [{ text: `${context}\n\n<tutor_answer>\n${JSON.stringify(answer.blocks)}\n</tutor_answer>` }] }],
       config: {
         systemInstruction: system,
