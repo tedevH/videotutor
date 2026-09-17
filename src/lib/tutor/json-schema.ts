@@ -98,6 +98,66 @@ const block = {
       },
       ["type", "title", "ops", "steps"],
     ),
+    obj({ type: { type: "string", enum: ["molecule"] }, title: str, smiles: str, name: str, notes: { type: "array", items: str } }, ["type", "title", "smiles", "name"]),
+    obj(
+      {
+        type: { type: "string", enum: ["reaction"] },
+        title: str,
+        reactants: { type: "array", items: str },
+        products: { type: "array", items: str },
+        conditions: str,
+        notes: { type: "array", items: str },
+      },
+      ["type", "title", "reactants", "products", "conditions"],
+    ),
+    obj(
+      {
+        type: { type: "string", enum: ["free_body"] },
+        title: str,
+        object: { type: "string", enum: ["box", "ball", "point"] },
+        incline_deg: { type: ["number", "null"] },
+        forces: {
+          type: "array",
+          items: obj(
+            {
+              label: str,
+              kind: { type: "string", enum: ["gravity", "normal", "friction_up_slope", "friction_down_slope", "tension", "applied", "custom"] },
+              magnitude: num,
+              angle_deg: num,
+              color: { type: "string", enum: ["red", "blue", "green", "orange", "purple", "ink"] },
+              show_components: { type: "boolean" },
+            },
+            ["label", "kind", "magnitude", "angle_deg", "color"],
+          ),
+        },
+        axes: { type: "string", enum: ["standard", "incline"] },
+      },
+      ["type", "title", "object", "incline_deg", "forces", "axes"],
+    ),
+    obj(
+      {
+        type: { type: "string", enum: ["data_structure"] },
+        title: str,
+        kind: { type: "string", enum: ["array", "linked_list", "tree", "graph", "stack"] },
+        directed: { type: "boolean" },
+        frames: {
+          type: "array",
+          items: obj(
+            {
+              caption: str,
+              items: { type: "array", items: str },
+              highlight: { type: "array", items: num },
+              pointers: { type: "array", items: obj({ label: str, index: num }, ["label", "index"]) },
+              tree: { type: "array", items: obj({ id: str, value: str, parent: { type: ["string", "null"] } }, ["id", "value", "parent"]) },
+              edges: { type: "array", items: obj({ from: str, to: str, label: str }, ["from", "to"]) },
+              highlight_ids: { type: "array", items: str },
+            },
+            ["caption"],
+          ),
+        },
+      },
+      ["type", "title", "kind", "frames"],
+    ),
     obj(
       { type: { type: "string", enum: ["steps"] }, title: str, steps: { type: "array", items: obj({ math: str, note: str }, ["math", "note"]) } },
       ["type", "title", "steps"],
@@ -159,7 +219,7 @@ export const tutorJsonSchema = obj(
       {
         about_screen: { type: "boolean" },
         question_type: { type: "string", enum: ["conceptual", "procedural", "factual", "visual", "follow_up", "off_topic"] },
-        visual: { type: "string", enum: ["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field", "board"] },
+        visual: { type: "string", enum: ["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field", "board", "molecule", "reaction", "free_body", "data_structure"] },
         why: str,
       },
       ["about_screen", "question_type", "visual", "why"],

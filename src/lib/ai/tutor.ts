@@ -249,7 +249,7 @@ export function addUsage(a: Usage, b: Usage): Usage {
   return { inputTokens: a.inputTokens + b.inputTokens, outputTokens: a.outputTokens + b.outputTokens };
 }
 
-const VISUAL_TYPES = new Set(["frame", "plot", "diagram", "flow", "transform2d", "plot3d", "vector_field", "board"]);
+const VISUAL_TYPES = new Set(["frame", "plot", "diagram", "flow", "transform2d", "plot3d", "vector_field", "board", "molecule", "reaction", "free_body", "data_structure"]);
 
 /** Applies the visual rules the prompt asks for, in case the model ignores them. */
 function enforceRules(response: TutorResponse, hasFrame: boolean, pausedAt: number): TutorResponse {

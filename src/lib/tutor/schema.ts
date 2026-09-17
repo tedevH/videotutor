@@ -126,6 +126,60 @@ export const block = z.discriminatedUnion("type", [
   z.object({ type: z.literal("check_question"), question: z.string(), answer: z.string() }),
   z.object({ type: z.literal("board"), title: z.string().catch(""), ops: z.array(boardOp).min(1), steps }),
   z.object({
+    type: z.literal("molecule"),
+    title: z.string().catch(""),
+    smiles: z.string(),
+    name: z.string().catch(""),
+    notes: z.array(z.string()).catch([]),
+  }),
+  z.object({
+    type: z.literal("reaction"),
+    title: z.string().catch(""),
+    reactants: z.array(z.string()).min(1),
+    products: z.array(z.string()).min(1),
+    conditions: z.string().catch(""),
+    notes: z.array(z.string()).catch([]),
+  }),
+  z.object({
+    type: z.literal("free_body"),
+    title: z.string().catch(""),
+    object: z.enum(["box", "ball", "point"]).catch("box"),
+    incline_deg: z.number().min(0).max(80).nullable().catch(null),
+    forces: z
+      .array(
+        z.object({
+          label: z.string(),
+          /** Standard forces get their direction from the geometry; only "custom" uses angle_deg. */
+          kind: z.enum(["gravity", "normal", "friction_up_slope", "friction_down_slope", "tension", "applied", "custom"]).catch("custom"),
+          magnitude: z.number().min(0),
+          angle_deg: z.number().catch(0),
+          color: z.enum(["red", "blue", "green", "orange", "purple", "ink"]).catch("red"),
+          show_components: z.boolean().catch(false),
+        }),
+      )
+      .min(1),
+    axes: z.enum(["standard", "incline"]).catch("standard"),
+  }),
+  z.object({
+    type: z.literal("data_structure"),
+    title: z.string().catch(""),
+    kind: z.enum(["array", "linked_list", "tree", "graph", "stack"]),
+    frames: z
+      .array(
+        z.object({
+          caption: z.string().catch(""),
+          items: z.array(z.string()).catch([]),
+          highlight: z.array(z.number()).catch([]),
+          pointers: z.array(z.object({ label: z.string(), index: z.number() })).catch([]),
+          tree: z.array(z.object({ id: z.string(), value: z.string(), parent: z.string().nullable() })).catch([]),
+          edges: z.array(z.object({ from: z.string(), to: z.string(), label: z.string().catch("") })).catch([]),
+          highlight_ids: z.array(z.string()).catch([]),
+        }),
+      )
+      .min(1),
+    directed: z.boolean().catch(false),
+  }),
+  z.object({
     type: z.literal("steps"),
     title: z.string().catch(""),
     steps: z.array(z.object({ math: z.string(), note: z.string().catch("") })).min(1),
@@ -164,7 +218,7 @@ export const answerPlan = z.object({
   on_screen: z.string().catch(""),
   about_screen: z.boolean().catch(false),
   question_type: z.enum(["conceptual", "procedural", "factual", "visual", "follow_up", "off_topic"]).catch("conceptual"),
-  visual: z.enum(["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field", "board"]).catch("none"),
+  visual: z.enum(["none", "frame", "plot", "diagram", "flow", "steps", "transform2d", "plot3d", "vector_field", "board", "molecule", "reaction", "free_body", "data_structure"]).catch("none"),
   why: z.string().catch(""),
 });
 

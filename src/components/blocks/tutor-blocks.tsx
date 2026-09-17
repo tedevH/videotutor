@@ -1,6 +1,9 @@
 import { Whiteboard } from "@/components/board/whiteboard";
 import type { Block } from "@/lib/tutor/schema";
 import { CheckQuestion } from "./check-question";
+import { DataStructure } from "./data-structure";
+import { FreeBody } from "./free-body";
+import { MoleculeBlock, ReactionBlock } from "./molecule-block";
 import { FlowBlock } from "./flow-block";
 import { FrameAnnotation } from "./frame-annotation";
 import { MarkdownBlock } from "./markdown-block";
@@ -36,6 +39,14 @@ export function TutorBlocks({
             return <PlotBlock key={i} {...b} />;
           case "check_question":
             return <CheckQuestion key={i} question={b.question} answer={b.answer} />;
+          case "molecule":
+            return <MoleculeBlock key={i} title={b.title} smiles={b.smiles} name={b.name} notes={b.notes} />;
+          case "reaction":
+            return <ReactionBlock key={i} title={b.title} reactants={b.reactants} products={b.products} conditions={b.conditions} notes={b.notes} />;
+          case "free_body":
+            return <FreeBody key={i} title={b.title} object={b.object} inclineDeg={b.incline_deg} forces={b.forces} axes={b.axes} />;
+          case "data_structure":
+            return <DataStructure key={i} title={b.title} kind={b.kind} frames={b.frames} directed={b.directed} />;
           case "board":
             return <Whiteboard key={i} title={b.title} ops={b.ops} steps={b.steps} allowDrawing={!!onAskAboutDrawing} onAskAboutDrawing={onAskAboutDrawing} />;
           case "steps":

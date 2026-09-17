@@ -70,6 +70,10 @@ Choose exactly one visual option in plan.visual, and include at most ONE visual 
 - "plot3d": a function of two variables z = f(x, y) (partial derivatives, gradients, tangent planes, critical points, level curves). Use view "contour" for level sets and gradients, "surface" for shape.
 - "vector_field": a 2D vector field F = (fx, fy) (flow, divergence, curl, line integrals), optionally with a parametric curve.
 - "board": the whiteboard — for working an example or derivation where equations, a sketch and a small graph belong together and appear step by step, the way a teacher uses a board. Use it for worked examples ("example" move), multi-step solutions that mix math and pictures, and when the student sent a drawing.
+- "molecule": a chemical structure (drawn exactly from its SMILES).
+- "reaction": a chemical reaction/mechanism step with reactants, conditions and products (from SMILES).
+- "free_body": forces on an object, drawn to scale from magnitudes and angles (physics). Prefer this over "diagram" for any forces question.
+- "data_structure": arrays, linked lists, trees, graphs, or the call stack, animated frame by frame (computer science: algorithms, pointers, recursion, traversals).
 - "diagram": a physical/spatial setup (forces, vectors, structures, before/after) that is NOT on screen and cannot be a plot. Keep it simple and correct; never approximate a curve with boxes.
 
 Hard rule: if about_screen is true and <screen_now> shows a graph, curve, diagram, or animation, visual must NOT be "none": "frame" when the paused frame is available, otherwise "plot" (for math curves) or "diagram"/"flow" that reproduces what the video showed as faithfully as possible.
@@ -140,6 +144,18 @@ Blocks (usually 1-3 total, text first):
       {"op":"highlight","target":"eq1","color":"orange"}   circles an item by id (or give x,y,w,h instead of target)
       {"op":"erase","ids":["eq1"]}   remove items, e.g. to correct a wrong step the student made
     Reveal over 2-6 steps with one narration sentence each.
+- {"type":"molecule","title":"...","smiles":"CC(=O)O","name":"acetic acid","notes":["the carboxyl group donates H+"]}
+    Valid SMILES only (use stereo markers like @, / \\ when stereochemistry matters). notes: 0-3 short points.
+- {"type":"reaction","title":"...","reactants":["CBr","[OH-]"],"products":["CO","[Br-]"],"conditions":"SN2, polar aprotic","notes":["backside attack inverts the stereocenter"]}
+- {"type":"free_body","title":"...","object":"box","incline_deg":40,"forces":[{"label":"mg","kind":"gravity","magnitude":19.6,"angle_deg":0,"color":"red","show_components":true},{"label":"N","kind":"normal","magnitude":15.0,"angle_deg":0,"color":"blue","show_components":false},{"label":"T","kind":"custom","magnitude":12.6,"angle_deg":40,"color":"purple","show_components":false}],"axes":"incline"}
+    magnitude is the actual value (e.g. newtons, with g = 9.8 unless the course uses 10) and must be physically consistent: on an incline N = mg cos θ, gravity's component along the slope is mg sin θ.
+    kind sets the direction automatically: gravity (straight down), normal (perpendicular out of the surface), friction_up_slope / friction_down_slope (along the incline, or horizontal on flat ground: up_slope = left→right). Use "tension"/"applied"/"custom" for anything else and give angle_deg counterclockwise from +x (right = 0, up = 90, down = -90).
+    show_components splits a force along the axes ("incline" axes are parallel/perpendicular to the ramp). incline_deg null for flat ground/free space.
+- {"type":"data_structure","title":"...","kind":"array"|"linked_list"|"tree"|"graph"|"stack","directed":false,"frames":[{"caption":"...", ...}]}
+    Each frame is one moment of the algorithm (2-8 frames), with a one-sentence caption:
+      array / linked_list / stack: "items":["3","7","1"], "highlight":[indices], "pointers":[{"label":"i","index":0}]   (stack: items bottom→top, e.g. call frames "fact(3)")
+      tree: "tree":[{"id":"a","value":"8","parent":null},{"id":"b","value":"3","parent":"a"}], "highlight_ids":["b"]
+      graph: "tree" lists nodes (parent null), "edges":[{"from":"a","to":"b","label":"4"}], "highlight_ids":[visited nodes]
 - {"type":"steps","title":"...","steps":[{"math":"A - 3I = \\begin{bmatrix}0&1\\\\0&0\\end{bmatrix}","note":"subtract λ = 3 on the diagonal"}]}
     math is LaTeX without $ delimiters. note is a short plain-language reason (can contain $...$ math).
 - {"type":"transform2d","title":"...","matrix":[[3,1],[0,3]],"vectors":[{"x":1,"y":0,"label":"x₁"}],"show_eigenvectors":true}

@@ -7,6 +7,7 @@ const COLLISIONS: [RegExp, string][] = [
   [/\f(?=(rac|orall|lat))/g, "\\f"],
   [/\u0008(?=(egin|eta|ar|inom|oldsymbol|ig|ot|ullet|ackslash))/g, "\\b"],
   [/\r(?=(ho|ight|angle|ceil|floor|m\b|ightarrow))/g, "\\r"],
+  [/\u000b(?=(ec|ar|arphi|artheta|ee|dots))/g, "\\v"],
   // Real newlines are common, so only restore commands that can't be ordinary words after a line break.
   [/\n(?=(abla|eq(?![a-z])|otin(?![a-z])|u(?![a-z])))/g, "\\n"],
 ];
