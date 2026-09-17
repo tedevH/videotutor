@@ -130,14 +130,14 @@ export default async function Home() {
       {/* universities */}
       <section className="mx-auto mt-20 w-full max-w-6xl px-4 sm:px-6">
         <p className="text-center text-sm text-muted">Used by students from</p>
-        <ul className="mt-4 flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+        <ul className="mx-auto mt-6 flex max-w-5xl flex-wrap items-center justify-center gap-x-10 gap-y-6">
           {UNIVERSITIES.map((u) => {
             const logo = universityLogo(u);
             return (
-              <li key={u} className="flex h-10 items-center text-lg font-semibold text-ink/55">
+              <li key={u} className="flex h-12 w-32 items-center justify-center text-lg font-semibold text-ink/55 sm:w-36">
                 {logo ? (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={logo} alt={u} className="h-9 w-auto opacity-70 grayscale" />
+                  <img src={logo} alt={u} className="max-h-10 max-w-full object-contain opacity-60 grayscale" />
                 ) : (
                   u
                 )}
