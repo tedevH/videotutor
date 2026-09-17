@@ -8,6 +8,7 @@ const LINKS = [
   ["/practice", "Practice"],
   ["/board", "Whiteboard"],
   ["/brain", "Lumo Brain"],
+  ["/invite", "🎁 Invite"],
 ] as const;
 
 export function AppNav({ current }: { current: (typeof LINKS)[number][0] }) {

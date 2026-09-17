@@ -1,63 +1,172 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
 const GOOGLE_ENABLED = process.env.NEXT_PUBLIC_GOOGLE_AUTH_ENABLED === "true";
 
-export function LoginForm({ next }: { next: string }) {
-  const [email, setEmail] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
+type Mode = "signin" | "signup" | "link" | "forgot";
 
-  const redirectTo = () => `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`;
+/**
+ * Email + password is the default so students sign in instantly (sessions persist for months).
+ * Email links remain available, and "forgot password" lets link-only accounts set a password.
+ */
+export function LoginForm({ next, initialMode = "signin" }: { next: string; initialMode?: Mode }) {
+  const router = useRouter();
+  const [mode, setMode] = useState<Mode>(initialMode);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+
+  const callbackUrl = (to: string) => `${window.location.origin}/auth/callback?next=${encodeURIComponent(to)}`;
+
+  async function finishSignIn() {
+    // Credit an invite link if they arrived through one, then go.
+    await fetch("/api/referrals/claim", { method: "POST" }).catch(() => null);
+    router.push(next);
+    router.refresh();
+  }
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    setBusy(true);
+    setError(null);
+    setNotice(null);
+    const supabase = createClient();
+
+    if (mode === "signin") {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        setBusy(false);
+        return setError(
+          error.message.includes("Email not confirmed")
+            ? "Confirm your email first. Check your inbox for the link we sent when you signed up."
+            : "Wrong email or password. If you've only used email links before, use “Forgot password” to set one.",
+        );
+      }
+      return finishSignIn();
+    }
+
+    if (mode === "signup") {
+      if (password.length < 8) {
+        setBusy(false);
+        return setError("Use at least 8 characters.");
+      }
+      const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl(next) } });
+      setBusy(false);
+      if (error) return setError(error.message);
+      if (data.session) return finishSignIn();
+      return setNotice("Almost done: confirm your email with the link we just sent. You only do this once; after that, sign in with your password.");
+    }
+
+    if (mode === "link") {
+      const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: callbackUrl(next) } });
+      setBusy(false);
+      if (error) return setError(error.message.includes("rate") ? "Too many emails sent. Try again in a bit, or sign in with a password." : error.message);
+      return setNotice("Check your email for a sign-in link.");
+    }
+
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: callbackUrl("/reset-password") });
+    setBusy(false);
+    if (resetError) return setError(resetError.message);
+    setNotice("Check your email for a link to set a new password.");
+  }
 
   async function google() {
-    await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: redirectTo() } });
+    await createClient().auth.signInWithOAuth({ provider: "google", options: { redirectTo: callbackUrl(next) } });
   }
 
-  async function magicLink(e: React.FormEvent) {
-    e.preventDefault();
-    setStatus("sending");
-    const { error } = await createClient().auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo() } });
-    setStatus(error ? "error" : "sent");
-  }
+  const title = { signin: "Sign in", signup: "Create your account", link: "Email me a sign-in link", forgot: "Reset your password" }[mode];
 
   return (
-    <div className="mt-6 space-y-4">
-      {GOOGLE_ENABLED && (
+    <div className="mt-6">
+      {(mode === "signin" || mode === "signup") && (
+        <div className="mb-4 grid grid-cols-2 rounded-full bg-stone-100 p-1 text-sm" role="tablist">
+          {(
+            [
+              ["signin", "Sign in"],
+              ["signup", "Create account"],
+            ] as const
+          ).map(([value, label]) => (
+            <button
+              key={value}
+              role="tab"
+              aria-selected={mode === value}
+              onClick={() => {
+                setMode(value);
+                setError(null);
+                setNotice(null);
+              }}
+              className={`rounded-full py-1.5 font-medium ${mode === value ? "bg-white shadow-sm" : "text-muted"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+      {(mode === "link" || mode === "forgot") && <p className="mb-3 font-semibold">{title}</p>}
+
+      {GOOGLE_ENABLED && (mode === "signin" || mode === "signup") && (
         <>
-          <button
-            onClick={google}
-            className="w-full rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-medium hover:bg-stone-50"
-          >
+          <button onClick={google} className="w-full rounded-lg border border-line bg-white px-4 py-2.5 text-sm font-medium hover:bg-stone-50">
             Continue with Google
           </button>
-          <div className="flex items-center gap-3 text-xs text-muted">
+          <div className="my-4 flex items-center gap-3 text-xs text-muted">
             <div className="h-px flex-1 bg-line" /> or <div className="h-px flex-1 bg-line" />
           </div>
         </>
       )}
-      {status === "sent" ? (
-        <p className="text-sm">Check your email for a sign-in link.</p>
-      ) : (
-        <form onSubmit={magicLink} className="space-y-2">
+
+      <form onSubmit={submit} className="space-y-2.5">
+        <input
+          type="email"
+          required
+          autoComplete="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="you@school.edu"
+          className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-accent"
+        />
+        {(mode === "signin" || mode === "signup") && (
           <input
-            type="email"
+            type="password"
             required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@school.edu"
+            minLength={mode === "signup" ? 8 : undefined}
+            autoComplete={mode === "signup" ? "new-password" : "current-password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder={mode === "signup" ? "Create a password (8+ characters)" : "Password"}
             className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-accent"
           />
-          <button
-            disabled={status === "sending"}
-            className="w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60"
-          >
-            {status === "sending" ? "Sending…" : "Email me a link"}
+        )}
+        <button disabled={busy} className="w-full rounded-lg bg-foreground px-4 py-2.5 text-sm font-medium text-white disabled:opacity-60">
+          {busy ? "One sec…" : { signin: "Sign in", signup: "Create account", link: "Send link", forgot: "Send reset link" }[mode]}
+        </button>
+      </form>
+
+      {error && <p className="mt-3 text-sm text-red-600">{error}</p>}
+      {notice && <p className="mt-3 rounded-lg bg-green-50 px-3 py-2 text-sm text-green-900">{notice}</p>}
+
+      <div className="mt-4 flex flex-wrap justify-between gap-2 text-sm">
+        {mode === "signin" && (
+          <button onClick={() => setMode("forgot")} className="text-muted hover:text-foreground">
+            Forgot password?
           </button>
-          {status === "error" && <p className="text-sm text-red-600">Couldn&apos;t send the link. Try again.</p>}
-        </form>
-      )}
+        )}
+        {mode !== "link" ? (
+          <button onClick={() => setMode("link")} className="text-muted hover:text-foreground">
+            Email me a link instead
+          </button>
+        ) : null}
+        {(mode === "link" || mode === "forgot") && (
+          <button onClick={() => setMode("signin")} className="text-muted hover:text-foreground">
+            ← Back to sign in
+          </button>
+        )}
+      </div>
     </div>
   );
 }
