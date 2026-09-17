@@ -153,17 +153,23 @@ export function Whiteboard({
           const p = toBoard(e);
           if (!p) return;
           (e.target as Element).setPointerCapture?.(e.pointerId);
-          active.current = { color: penColor, points: [p] };
-          setStrokes((s) => [...s, active.current!]);
+          const stroke = { color: penColor, points: [p] };
+          active.current = stroke;
+          setStrokes((s) => [...s, stroke]);
         }}
         onPointerMove={(e) => {
           if (!drawing || !active.current) return;
           const p = toBoard(e);
           if (!p) return;
-          active.current.points.push(p);
-          setStrokes((s) => [...s.slice(0, -1), { ...active.current! }]);
+          // Snapshot now: the state update runs later, possibly after pointer-up clears the ref.
+          const stroke = { color: active.current.color, points: [...active.current.points, p] };
+          active.current = stroke;
+          setStrokes((s) => [...s.slice(0, -1), stroke]);
         }}
         onPointerUp={() => {
+          active.current = null;
+        }}
+        onPointerCancel={() => {
           active.current = null;
         }}
       >
