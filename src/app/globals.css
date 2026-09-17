@@ -1,26 +1,53 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #fbfaf7;
+  --foreground: #1c1b19;
+  --muted: #6b6860;
+  --line: #e6e2d8;
+  --accent: #4f46e5;
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-muted: var(--muted);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --font-sans: var(--font-inter);
+  --font-hand: var(--font-caveat);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Whiteboard stroke animation: paths use pathLength=1 so dash math is length-independent. */
+.sketch-stroke {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: sketch-draw var(--dur, 700ms) ease-out forwards;
+  animation-delay: var(--delay, 0ms);
+}
+.sketch-fade {
+  opacity: 0;
+  animation: sketch-fade 350ms ease-out forwards;
+  animation-delay: var(--delay, 0ms);
+}
+@keyframes sketch-draw {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes sketch-fade {
+  to { opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sketch-stroke, .sketch-fade { animation-duration: 1ms; animation-delay: 0ms; }
+}
+
+.prose-tutor p { margin: 0.4rem 0; line-height: 1.6; }
+.prose-tutor ul { list-style: disc; padding-left: 1.25rem; margin: 0.4rem 0; }
+.prose-tutor ol { list-style: decimal; padding-left: 1.25rem; margin: 0.4rem 0; }
+.prose-tutor code { background: #efece4; padding: 0.1rem 0.3rem; border-radius: 4px; font-size: 0.9em; }
+.prose-tutor strong { font-weight: 600; }
+.prose-tutor .katex-display { overflow-x: auto; overflow-y: hidden; padding: 0.25rem 0; }
