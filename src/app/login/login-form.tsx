@@ -125,7 +125,7 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
           autoComplete="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
-          placeholder="you@school.edu"
+          placeholder="Your email (school one preferred)"
           className="w-full rounded-lg border border-line px-3 py-2.5 text-sm outline-none focus:border-accent"
         />
         {(mode === "signin" || mode === "signup") && (
