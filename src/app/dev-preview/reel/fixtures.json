@@ -1,0 +1,223 @@
+{
+  "q1": "can you draw y = x² − x on the board and show me where it crosses the x-axis?",
+  "r1": {
+    "plan": {
+      "on_screen": "",
+      "about_screen": true,
+      "question_type": "visual",
+      "visual": "board",
+      "why": "The student asked to draw y = x^2 - x on the board and show its x-intercepts, so I will draw the graph and show the algebraic steps."
+    },
+    "move": "explain",
+    "awaiting_student": true,
+    "resolved": false,
+    "assessment": {
+      "result": "not_applicable",
+      "diagnosis": ""
+    },
+    "observations": [],
+    "misconception": "",
+    "blocks": [
+      {
+        "type": "text",
+        "md": "Here is the graph of $y = x^2 - x$ on the board. To find where it crosses the x-axis, we set $y = 0$ and factor the quadratic equation: $x(x - 1) = 0$. This gives us intercepts at $x = 0$ and $x = 1$."
+      },
+      {
+        "type": "board",
+        "title": "Graphing y = x^2 - x",
+        "ops": [
+          {
+            "op": "write",
+            "id": "eq1",
+            "step": 1,
+            "x": 6,
+            "y": 8,
+            "text": "$y = x^2 - x$",
+            "size": "md",
+            "color": "ink"
+          },
+          {
+            "op": "write",
+            "id": "eq2",
+            "step": 2,
+            "x": 6,
+            "y": 18,
+            "text": "$0 = x(x - 1)$",
+            "size": "md",
+            "color": "ink"
+          },
+          {
+            "op": "graph",
+            "id": "g1",
+            "step": 3,
+            "x": 45,
+            "y": 8,
+            "w": 45,
+            "h": 35,
+            "fn": "x^2 - x",
+            "xDomain": [
+              -1,
+              2
+            ],
+            "yDomain": [
+              -1,
+              3
+            ],
+            "color": "ink",
+            "shade": null
+          }
+        ],
+        "steps": [
+          {
+            "step": 1,
+            "narration": "First, let's write out our quadratic equation."
+          },
+          {
+            "step": 2,
+            "narration": "To find the x-intercepts, we set y to zero and factor the expression."
+          },
+          {
+            "step": 3,
+            "narration": "Now let's sketch the parabola to see where it crosses the x-axis at 0 and 1."
+          }
+        ]
+      }
+    ],
+    "rewatch_from": null,
+    "context_cache": {
+      "screen_now": "subject: algebra: quadratic functions and intercepts (intro)\n\nON SCREEN AT THE PAUSE:\nOn the whiteboard, there is a Cartesian coordinate system with a horizontal x-axis and a vertical y-axis intersecting at the origin. The parabola representing the quadratic equation y = x^2 - x is plotted in blue, opening upwards. The x-intercepts of the parabola are clearly marked at the points (0, 0) and (1, 0) where the curve crosses the horizontal axis.\n\nLAST 30 SECONDS:\nThe student asked to draw the function y = x squared minus x and show where it crosses the x-axis. Lumo responded by drawing the Cartesian plane and graphing the parabola. Lumo then highlighted the two intersection points on the x-axis at x equals zero and x equals one. Finally, Lumo explained how setting y to zero allows us to factor the equation to find these x-intercepts.",
+      "verified_work": "[code output]\nx-intercepts: [0, 1]\nVertex: (1/2, -1/4)\n\n[code output]\nVerification passed successfully.\n\n1. **Problem Statement & Definitions**\n   - **Asked:** Graph the quadratic function $y = x^2 - x$ and determine where it crosses the x-axis.\n   - **Definitions:** \n     - A **quadratic function** is a polynomial function of the form $f(x) = ax^2 + bx + c$ ($a \\neq 0$), whose graph is a parabola.\n     - An **x-intercept** is a point on the graph where $y = 0$. To find it algebraically, set $f(x) = 0$ and solve for $x$.\n\n2. **Step-by-Step Solution**\n   - **Step 1: Set $y = 0$**\n     $$x^2 - x = 0$$\n   - **Step 2: Factor the expression**\n     $$x(x - 1) = 0$$\n   - **Step 3: Solve for $x$ using the Zero Product Property**\n     $$x = 0 \\quad \\text{or} \\quad x - 1 = 0 \\implies x = 1$$\n     Thus, the x-intercepts are at the points $(0, 0)$ and $(1, 0)$.\n   - **Step 4: Find the vertex for sketching**\n     Using the derivative $\\frac{dy}{dx} = 2x - 1 = 0$, we find the critical point at $x = \\frac{1}{2}$. \n     Evaluating $y$ at $x = \\frac{1}{2}$:\n     $$y = \\left(\\frac{1}{2}\\right)^2 - \\frac{1}{2} = \\frac{1}{4} - \\frac{1}{4} = -\\frac{1}{4}$$\n     The vertex is $(\\frac{1}{2}, -\\frac{1}{4})$. Since $a = 1 > 0$, the parabola opens upward.\n\n3. **Verification**\n   - Check $x = 0$: $0^2 - 0 = 0$ ($\\checkmark$)\n   - Check $x = 1$: $1^2 - 1 = 0$ ($\\checkmark$)\n   - Check vertex derivative: $\\frac{d}{dx}(x^2 - x)\\big|_{x=1/2} = 2(\\frac{1}{2}) - 1 = 0$ ($\\checkmark$)\n\n### VERIFIED RESULTS\n- **Function:** $y = x^2 - x$\n- **x-intercepts:** $(0, 0)$ and $(1, 0)$\n- **Vertex:** $\\left(\\frac{1}{2}, -\\frac{1}{4}\\right)$\n- **Direction:** Opens upward\n\n### KEY INSIGHT\nFinding x-intercepts of a function algebraically always reduces to setting the output ($y$ or $f(x)$) to zero and solving the resulting equation, which for polynomials is best achieved by factoring.",
+      "subject": "algebra: quadratic functions and intercepts",
+      "level": "intro",
+      "timestamp": 0
+    }
+  },
+  "q2": "now mark the vertex",
+  "r2": {
+    "plan": {
+      "on_screen": "",
+      "about_screen": true,
+      "question_type": "visual",
+      "visual": "board",
+      "why": "The student asked to mark the vertex of the parabola on the whiteboard, so we update the board with the calculated vertex point."
+    },
+    "move": "explain",
+    "awaiting_student": true,
+    "resolved": false,
+    "assessment": {
+      "result": "correct",
+      "diagnosis": "The student correctly follows along with graphing and locating key features of the parabola."
+    },
+    "observations": [
+      {
+        "concept": "Vertex of a parabola",
+        "subject": "algebra",
+        "signal": "understood",
+        "misconception_key": "",
+        "misconception": ""
+      }
+    ],
+    "misconception": "",
+    "blocks": [
+      {
+        "type": "text",
+        "md": "To find the vertex of $y = x^2 - x$, we can use the midpoint of the x-intercepts ($x = 0$ and $x = 1$), which gives $x = \\frac{1}{2}$. Plugging that back into the equation gives $y = -\\frac{1}{4}$. Here is the vertex marked on the graph at $(\\frac{1}{2}, -\\frac{1}{4})$. Note how it sits right halfway between the two intercepts!"
+      },
+      {
+        "type": "board",
+        "title": "Graphing y = x^2 - x",
+        "ops": [
+          {
+            "op": "graph",
+            "id": "g1",
+            "step": 1,
+            "x": 45,
+            "y": 8,
+            "w": 45,
+            "h": 35,
+            "fn": "x^2 - x",
+            "xDomain": [
+              -1,
+              2
+            ],
+            "yDomain": null,
+            "color": "ink",
+            "shade": null,
+            "marks": [
+              {
+                "x": 0.5,
+                "y": -0.25,
+                "label": "vertex (0.5, -0.25)"
+              }
+            ]
+          },
+          {
+            "op": "write",
+            "id": "eq3",
+            "step": 1,
+            "x": 6,
+            "y": 28,
+            "text": "Vertex: $(0.5, -0.25)$",
+            "size": "md",
+            "color": "blue"
+          }
+        ],
+        "steps": [
+          {
+            "step": 1,
+            "narration": "Marking the vertex at (0.5, -0.25) on the graph."
+          }
+        ]
+      }
+    ],
+    "rewatch_from": null,
+    "context_cache": {
+      "screen_now": "subject: algebra: quadratic functions (intro)\n\nON SCREEN AT THE PAUSE:\nspeaker only\n\nLAST 30 SECONDS:\nThe student and Lumo discussed the graph on the whiteboard. The student asked to mark the vertex. Lumo prompted the student to identify the correct point. The final second shows only the speaker.",
+      "verified_work": "[code output]\nVertex: (1/2, -1/4)\nFormula Vertex: (0.5, -0.25)\n\n[code output]\nAxis of symmetry: 0.5\n\nTo find and mark the vertex of the parabola $y = x^2 - x$:\n\n### 1. Definitions and Concepts\nFor a quadratic function in standard form $y = ax^2 + bx + c$ (with $a \\neq 0$), the graph is a parabola. The **vertex** is its turning point (the minimum when $a > 0$ or maximum when $a < 0$). \nThe x-coordinate of the vertex can be found in two standard ways:\n1. **Axis of symmetry / Intercept midpoint:** Since parabolas are symmetric, the x-coordinate of the vertex lies exactly halfway between the x-intercepts.\n2. **Calculus / Formula:** By setting the first derivative $\\frac{dy}{dx} = 0$, or using the vertex formula $x = -\\frac{b}{2a}$.\n\n### 2. Step-by-Step Calculation\n- **Identify coefficients:** For $y = x^2 - x$, we have $a = 1$, $b = -1$, and $c = 0$.\n- **Find the x-coordinate of the vertex:**\n  $$x = -\\frac{b}{2a} = -\\frac{-1}{2(1)} = \\frac{1}{2}$$\n  *(Alternatively, using the x-intercepts $x = 0$ and $x = 1$ from $0 = x(x-1)$, the midpoint is $\\frac{0 + 1}{2} = \\frac{1}{2}$)*.\n- **Find the y-coordinate of the vertex:** Substitute $x = \\frac{1}{2}$ back into the equation:\n  $$y = \\left(\\frac{1}{2}\\right)^2 - \\frac{1}{2} = \\frac{1}{4} - \\frac{1}{2} = -\\frac{1}{4}$$\n\n### 3. Verification\n- **Derivative check:** $\\frac{dy}{dx} = 2x - 1$. Setting $\\frac{dy}{dx} = 0 \\implies 2x - 1 = 0 \\implies x = \\frac{1}{2}$. Plugging in yields $y = -\\frac{1}{4}$.\n- **Symmetry check:** The distance from the vertex $x = 0.5$ to each intercept ($x = 0$ and $x = 1$) is $0.5$, confirming the symmetry of the parabola.\n\n---\n\n### VERIFIED RESULTS\n- Vertex coordinates: $\\left(\\frac{1}{2}, -\\frac{1}{4}\\right)$ or $(0.5, -0.25)$\n- Equation of the axis of symmetry: $x = \\frac{1}{2}$\n\n### KEY INSIGHT\nThe x-coordinate of the vertex of a parabola with real roots always lies precisely halfway between its x-intercepts.",
+      "subject": "algebra: quadratic functions",
+      "level": "intro",
+      "timestamp": 0
+    }
+  },
+  "q3": "check my work on problem 1",
+  "r3": {
+    "plan": {
+      "on_screen": "",
+      "about_screen": true,
+      "question_type": "procedural",
+      "visual": "frame",
+      "why": "Point out the missing chain rule step on problem 1 directly using the worksheet frame."
+    },
+    "move": "hint",
+    "awaiting_student": true,
+    "resolved": false,
+    "assessment": {
+      "result": "not_applicable",
+      "diagnosis": ""
+    },
+    "observations": [
+      {
+        "concept": "Chain rule",
+        "subject": "calculus",
+        "signal": "confused",
+        "misconception_key": "",
+        "misconception": ""
+      }
+    ],
+    "misconception": "chain-rule:forgets-inner-derivative",
+    "blocks": [
+      {
+        "type": "text",
+        "md": "Your answer for problem 1 has the correct derivative for the outer function $\\sin(u)$, but when you have a composite function like $\\sin(x^2)$, what rule do we need to apply to the inside function $x^2$?"
+      }
+    ],
+    "rewatch_from": null,
+    "context_cache": {
+      "screen_now": "subject: calculus: derivatives and chain rule (intro)\n\nON SCREEN AT THE PAUSE:\nMATH 21A Problem Set 4: Derivatives and their applications. Problem 1 asks to differentiate f(x) = sin(x^2) and simplify. Handwritten work shows f'(x) = cos(x^2) and done! Problem 2 asks to find all critical points of g(x) = x^3 - 3x + 1 and classify each one, with handwritten work g'(x) = 3x^2 - 3 = 0, x^2 = 1 -> x = +-1. Problem 3 asks to evaluate the limit as x approaches 0 of (1 - cos x) / x^2.\n\nLAST 30 SECONDS:\nThe student showed their homework problem set on the whiteboard, focusing on problems 1, 2, and 3. The student asked to check their work specifically on problem 1. The handwritten work on problem 1 showed an incorrect derivative for sin(x^2), missing the chain rule.",
+      "verified_work": "[code output]\nf(x) = sin(x**2)\nf'(x) = 2*x*cos(x**2)\n\n### 1. Statement and Definitions\n* **Problem:** Differentiate $f(x) = \\sin(x^2)$ and simplify.\n* **Theorem Involved (Chain Rule):** If a function $f$ is composite, defined as $f(x) = g(h(x))$, its derivative is given by:\n  $$\\frac{d}{dx}[g(h(x))] = g'(h(x)) \\cdot h'(x)$$\n  In words: differentiate the outside function with respect to the inside function, evaluated at the inside function, and then multiply by the derivative of the inside function.\n\n---\n\n### 2. Step-by-Step Solution\n1. **Identify the outer and inner functions:**\n   * Outer function: $g(u) = \\sin(u)$\n   * Inner function: $h(x) = x^2$\n   * Check composition: $g(h(x)) = \\sin(x^2) = f(x)$.\n\n2. **Differentiate the outer function with respect to its argument:**\n   * $g'(u) = \\cos(u)$\n   * Evaluate at the inner function: $g'(h(x)) = \\cos(x^2)$.\n\n3. **Differentiate the inner function:**\n   * $h'(x) = \\frac{d}{dx}[x^2] = 2x$.\n\n4. **Apply the Chain Rule:**\n   $$f'(x) = g'(h(x)) \\cdot h'(x) = \\cos(x^2) \\cdot 2x = 2x \\cos(x^2)$$\n\n---\n\n### 3. Verification\nUsing SymPy:\n```python\nimport sympy as sp\nx = sp.Symbol('x')\nf = sp.sin(x**2)\nf_prime = sp.diff(f, x) # Result: 2*x*cos(x**2)\n```\nThe symbolic derivative confirms $2x\\cos(x^2)$.\n\n---\n\n### VERIFIED RESULTS\n* $f'(x) = 2x \\cos(x^2)$\n\n---\n\n### KEY INSIGHT\nThe student forgot to multiply by the derivative of the inner function ($x^2$), applying only the derivative of the outer sine function ($\\cos(x^2)$) and treating the inner expression as a static argument rather than a function in its own right.",
+      "subject": "calculus: derivatives and chain rule",
+      "level": "intro",
+      "timestamp": 0
+    }
+  }
+}

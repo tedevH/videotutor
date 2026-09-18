@@ -87,6 +87,8 @@ export const boardOp = z.discriminatedUnion("op", [
     yDomain: z.tuple([z.number(), z.number()]).nullable().catch(null),
     color: boardColor,
     shade: z.tuple([z.number(), z.number()]).nullable().catch(null),
+    /** Points ON the graph, in the graph's own math coordinates, so they land exactly on the curve. */
+    marks: z.array(z.object({ x: z.number(), y: z.number(), label: z.string().catch("") })).catch([]),
   }),
   z.object({
     op: z.literal("highlight"),

@@ -70,7 +70,11 @@ function graphPaths(op: Extract<BoardOp, { op: "graph" }>) {
   }
   const axisX = y0 <= 0 && y1 >= 0 ? sy(0) : op.y + op.h;
   const axisY = x0 <= 0 && x1 >= 0 ? sx(0) : op.x;
-  return { curve, shade, axisX, axisY };
+  // Marks use the same transform as the curve, so a vertex sits exactly on it.
+  const marks = (op.marks ?? [])
+    .filter((m) => m.x >= Math.min(x0, x1) && m.x <= Math.max(x0, x1) && m.y >= y0 && m.y <= y1)
+    .map((m) => ({ cx: sx(m.x), cy: sy(m.y), label: m.label }));
+  return { curve, shade, axisX, axisY, marks };
 }
 
 export function Whiteboard({
@@ -80,6 +84,7 @@ export function Whiteboard({
   allowDrawing = false,
   onAskAboutDrawing,
   captureRef,
+  stepMs = STEP_MS,
 }: {
   title?: string;
   ops: BoardOp[];
@@ -88,6 +93,8 @@ export function Whiteboard({
   onAskAboutDrawing?: (png: string) => void;
   /** Lets the page grab the current board (Lumo's work plus the student's strokes) to send with a question. */
   captureRef?: { current: (() => Promise<string | null>) | null };
+  /** How long each step shows before the next one draws. */
+  stepMs?: number;
 }) {
   const maxStep = Math.max(1, ...ops.map((o) => o.step), ...steps.map((s) => s.step));
   const [step, setStep] = useState(1);
@@ -114,9 +121,9 @@ export function Whiteboard({
 
   useEffect(() => {
     if (!autoplay || step >= maxStep) return;
-    const t = setTimeout(() => setStep((s) => s + 1), STEP_MS);
+    const t = setTimeout(() => setStep((s) => s + 1), stepMs);
     return () => clearTimeout(t);
-  }, [autoplay, step, maxStep]);
+  }, [autoplay, step, maxStep, stepMs]);
 
   const items = useMemo(() => visibleOps(ops, step), [ops, step]);
   // Grow the board downward if Lumo wrote past the bottom edge, rather than clipping the last lines.
@@ -298,6 +305,25 @@ export function Whiteboard({
                   <line x1={o.x} y1={g.axisX} x2={o.x + o.w} y2={g.axisX} stroke="#1c1b19" strokeOpacity={0.45} strokeWidth={0.25} />
                   <line x1={g.axisY} y1={o.y} x2={g.axisY} y2={o.y + o.h} stroke="#1c1b19" strokeOpacity={0.45} strokeWidth={0.25} />
                   <path d={g.curve} fill="none" stroke={color} strokeWidth={0.55} pathLength={1} className="sketch-stroke" />
+                  {g.marks.map((m, k) => (
+                    <g key={k}>
+                      <circle cx={m.cx} cy={m.cy} r={0.9} fill={colorOf("red")} />
+                      {m.label && (
+                        <text
+                          x={m.cx + (m.cx > o.x + o.w * 0.6 ? -1.6 : 1.6)}
+                          y={m.cy - 1.4}
+                          textAnchor={m.cx > o.x + o.w * 0.6 ? "end" : "start"}
+                          fontSize={2.6}
+                          fill={colorOf("red")}
+                          stroke="white"
+                          strokeWidth={0.6}
+                          paintOrder="stroke"
+                        >
+                          {m.label}
+                        </text>
+                      )}
+                    </g>
+                  ))}
                 </g>
               );
             }
@@ -397,7 +423,13 @@ function buildExportSvg(items: BoardOp[], strokes: Stroke[], byId: Map<string, B
       parts.push(`<polyline points="${o.points.map((p) => p.join(",")).join(" ")}" fill="none" stroke="${color}" stroke-width="0.5"/>`);
     } else if (o.op === "graph") {
       const g = graphPaths(o);
-      if (g) parts.push(`<path d="${g.curve}" fill="none" stroke="${color}" stroke-width="0.5"/>`);
+      if (g) {
+        parts.push(`<path d="${g.curve}" fill="none" stroke="${color}" stroke-width="0.5"/>`);
+        for (const m of g.marks) {
+          parts.push(`<circle cx="${m.cx}" cy="${m.cy}" r="0.9" fill="${colorOf("red")}"/>`);
+          if (m.label) parts.push(`<text x="${m.cx + 1.6}" y="${m.cy - 1.4}" font-size="2.6" fill="${colorOf("red")}">${esc(m.label)}</text>`);
+        }
+      }
     } else if (o.op === "highlight") {
       const t = o.target ? byId.get(o.target) : null;
       const b = (o.target && measured[o.target]) ?? (t && boxOf(t)) ?? boxOf(o);

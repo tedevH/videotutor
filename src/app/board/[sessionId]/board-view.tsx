@@ -151,7 +151,7 @@ export function BoardView(props: { sessionId: string; initialMode: "socratic" | 
  * The board is cumulative, like a real one: every board Lumo has drawn this session is kept,
  * with later ops (and erases) applied on top, so a follow-up can add to earlier work.
  */
-function latestBoardOf(messages: StoredMessage[]) {
+export function latestBoardOf(messages: StoredMessage[]) {
   const ops: BoardOp[] = [];
   const steps: { step: number; narration: string }[] = [];
   let title: string | undefined;
@@ -167,11 +167,21 @@ function latestBoardOf(messages: StoredMessage[]) {
     const erased = new Set(boardOps.flatMap((o) => (o.op === "erase" ? o.ids : [])));
     const replaced = new Set(boardOps.map((o) => ("id" in o && o.id ? o.id : "")).filter(Boolean));
     // Drop anything this turn erased or redrew, then append the new ops after the old ones.
+    // A redrawn item keeps its original step, so it stays on the board instead of blinking out and back.
+    const earlierStep = new Map<string, number>();
     for (let i = ops.length - 1; i >= 0; i--) {
       const id = "id" in ops[i] && ops[i].id ? (ops[i].id as string) : "";
+      if (id && replaced.has(id)) earlierStep.set(id, ops[i].step);
       if (id && (erased.has(id) || replaced.has(id))) ops.splice(i, 1);
     }
-    ops.push(...boardOps.filter((o) => o.op !== "erase").map((o) => ({ ...o, step: o.step + offset })));
+    ops.push(
+      ...boardOps
+        .filter((o) => o.op !== "erase")
+        .map((o) => {
+          const id = "id" in o && o.id ? o.id : "";
+          return { ...o, step: (id && earlierStep.get(id)) || o.step + offset };
+        }),
+    );
     steps.push(...(board.steps ?? []).map((s) => ({ ...s, step: s.step + offset })));
     offset += span;
     title = board.title ?? title;

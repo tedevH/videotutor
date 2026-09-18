@@ -153,7 +153,8 @@ Blocks (usually 1-3 total, text first):
     ops (each has "step"; give ids to things you'll highlight or erase):
       {"op":"write","id":"eq1","x":6,"y":8,"text":"$2x + 6 = 14$","size":"md","color":"ink"}   x,y = top-left; text may mix words and $LaTeX$; one line per write (≈ 3 units tall for md)
       {"op":"draw","shape":"arrow"|"line"|"rect"|"ellipse"|"polyline","points":[[x1,y1],[x2,y2],...],"color":"blue","dashed":false,"label":""}   rect/ellipse use two corner points
-      {"op":"graph","id":"g1","x":55,"y":8,"w":38,"h":30,"fn":"x^2","xDomain":[-3,3],"yDomain":null,"color":"blue","shade":[0,2]}   a small plot drawn from the function; shade is an x-interval or null
+      {"op":"graph","id":"g1","x":55,"y":8,"w":38,"h":30,"fn":"x^2","xDomain":[-3,3],"yDomain":null,"color":"blue","shade":[0,2],"marks":[{"x":0,"y":0,"label":"vertex (0, 0)"}]}   a small plot drawn from the function; shade is an x-interval or null
+      marks are points ON the graph in the graph's own math coordinates (x, y as numbers, not board units); the app places them exactly. To mark a vertex, intercept, intersection or any point on a curve, ALWAYS use marks (re-emit the graph with the same id to add marks to an existing graph). Never place a "draw" op on a graph by guessing board coordinates: it will land in the wrong place.
       {"op":"highlight","target":"eq1","color":"orange"}   circles an item by id (or give x,y,w,h instead of target)
       {"op":"erase","ids":["eq1"]}   remove items, e.g. to correct a wrong step the student made
     Reveal over 2-6 steps with one narration sentence each.
@@ -334,7 +335,7 @@ export function describeBoard(history: { role: string; content: unknown }[]): st
           case "write":
             return `- ${id} [write @ ${o.x},${o.y}]: ${o.text}`;
           case "graph":
-            return `- ${id} [graph @ ${o.x},${o.y} ${o.w}x${o.h}]: ${o.fn}`;
+            return `- ${id} [graph @ ${o.x},${o.y} ${o.w}x${o.h}]: ${o.fn}, x in [${o.xDomain.join(", ")}]${o.marks?.length ? `, marks: ${o.marks.map((m) => `(${m.x}, ${m.y}) ${m.label}`).join("; ")}` : ""}`;
           case "draw":
             return `- ${id} [${o.shape} sketch]${o.label ? `: ${o.label}` : ""}`;
           default:

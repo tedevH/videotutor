@@ -88,6 +88,7 @@ const block = {
               xDomain: pair,
               yDomain: { anyOf: [pair, { type: "null" }] },
               shade: { anyOf: [pair, { type: "null" }] },
+              marks: { type: "array", items: obj({ x: num, y: num, label: str }, ["x", "y"]) },
               target: str,
               ids: { type: "array", items: str },
             },

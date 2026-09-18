@@ -57,7 +57,7 @@ export function TutorMessage({
       {content.misconception && (
         <p className="rounded-lg border-l-4 border-amber-400 bg-amber-50 px-3 py-2 text-sm">
           <span className="font-semibold">The tricky part: </span>
-          {content.misconception}
+          {readableMisconception(content.misconception)}
         </p>
       )}
       {content.assessment && content.assessment.result !== "not_applicable" && (
@@ -157,4 +157,11 @@ export function Thinking() {
       </span>
     </div>
   );
+}
+
+/** The model sometimes names a misconception as a key ("chain-rule-forgets-inner-derivative"); show it as words. */
+function readableMisconception(text: string) {
+  if (/\s/.test(text) || !/[-_]/.test(text)) return text;
+  const words = text.replace(/[-_]+/g, " ").replace(/\s*:\s*/g, ": ").trim();
+  return words.charAt(0).toUpperCase() + words.slice(1);
 }
