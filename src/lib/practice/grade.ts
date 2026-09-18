@@ -1,4 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { SAFETY_SETTINGS } from "@/lib/ai/guard";
 import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
 import { repairLatex } from "@/lib/tutor/latex-repair";
@@ -38,7 +39,7 @@ End with a JSON code block:
     new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! }).models.generateContent({
       model: m,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
-      config: { tools: [{ codeExecution: {} }], temperature: 0.1, maxOutputTokens: 3000, thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM } },
+      config: { safetySettings: SAFETY_SETTINGS, tools: [{ codeExecution: {} }], temperature: 0.1, maxOutputTokens: 3000, thinkingConfig: { thinkingLevel: ThinkingLevel.MEDIUM } },
     }),
   );
   await recordUsage(userId ?? null, "practice", model(), usageFrom(res.usageMetadata));

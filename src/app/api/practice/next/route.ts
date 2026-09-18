@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { screenQuestion } from "@/lib/ai/guard";
 import { chooseConcept, createNextItem, ensureConceptByName, publicItem, takePreparedItem } from "@/lib/practice/engine";
 import { planFor } from "@/lib/entitlements";
 import { createAdminClient, createClient } from "@/lib/supabase/server";
@@ -14,6 +15,10 @@ export async function POST(request: Request) {
   if (!user) return NextResponse.json({ error: "Sign in first" }, { status: 401 });
 
   const body = (await request.json()) as { conceptId?: string; courseId?: string; topic?: string; subject?: string; review?: boolean };
+  if (body.topic?.trim()) {
+    const verdict = screenQuestion(body.topic);
+    if (!verdict.ok) return NextResponse.json({ error: "Pick a school topic to practice, like \"chain rule\" or \"SN2 reactions\"." }, { status: 400 });
+  }
   let conceptId = body.conceptId;
   if (!conceptId && body.topic?.trim()) {
     conceptId = (await ensureConceptByName(user.id, body.topic.trim(), body.subject?.trim() || null)).id;

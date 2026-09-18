@@ -1,4 +1,5 @@
 import { GoogleGenAI, ThinkingLevel, type Part } from "@google/genai";
+import { SAFETY_SETTINGS } from "@/lib/ai/guard";
 import { z } from "zod";
 import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
@@ -83,6 +84,7 @@ ${opts.existingConcepts.length ? `Reuse these concept names exactly when the sam
       model: m,
       contents: [{ role: "user", parts }],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         responseMimeType: "application/json",
         responseJsonSchema: jsonSchema,
         temperature: 0.1,

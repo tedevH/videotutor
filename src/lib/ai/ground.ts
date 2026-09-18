@@ -1,4 +1,5 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel } from "@google/genai";
+import { SAFETY_SETTINGS } from "@/lib/ai/guard";
 import { withModelFallback } from "@/lib/ai/retry";
 import type { Usage } from "@/lib/ai/tutor";
 import type { Block, FrameAnnotation } from "@/lib/tutor/schema";
@@ -42,6 +43,7 @@ ${targets.map((t, i) => `${i}: ${t}`).join("\n")}`,
         },
       ],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         responseMimeType: "application/json",
         temperature: 0,
         thinkingConfig: { thinkingLevel: ThinkingLevel.LOW },

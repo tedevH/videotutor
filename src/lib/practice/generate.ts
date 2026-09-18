@@ -1,4 +1,5 @@
 import { GoogleGenAI, ThinkingLevel } from "@google/genai";
+import { SAFETY_SETTINGS } from "@/lib/ai/guard";
 import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
 import type { Difficulty } from "@/lib/brain/model";
@@ -60,6 +61,7 @@ End your reply with the final problem as a JSON code block:
       model: m,
       contents: [{ role: "user", parts: [{ text: prompt }] }],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         tools: [{ codeExecution: {} }],
         temperature: 0.8,
         maxOutputTokens: 6000,

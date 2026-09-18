@@ -1,4 +1,5 @@
 import { GoogleGenAI, PartMediaResolutionLevel, ThinkingLevel, type Part } from "@google/genai";
+import { assertNotBlocked, SAFETY_SETTINGS } from "@/lib/ai/guard";
 import { groundFrameBlock } from "@/lib/ai/ground";
 import { compileExpr } from "@/lib/math-eval";
 import { repairLatex } from "@/lib/tutor/latex-repair";
@@ -79,6 +80,7 @@ Report as JSON:
       model: m,
       contents: [{ role: "user", parts }],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         temperature: 0.1,
         maxOutputTokens: 2000,
         responseMimeType: "application/json",
@@ -104,6 +106,7 @@ export async function solveWithCode(system: string, context: string) {
       model: m,
       contents: [{ role: "user", parts: [{ text: context }] }],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         systemInstruction: system,
         tools: [{ codeExecution: {} }],
         temperature: 0.2,
@@ -157,6 +160,7 @@ export async function askTutor(
         model: m,
         contents,
         config: {
+          safetySettings: SAFETY_SETTINGS,
           systemInstruction: system,
           responseMimeType: "application/json",
           responseJsonSchema: tutorJsonSchema,
@@ -168,6 +172,8 @@ export async function askTutor(
       }),
     );
     usage = addUsage(usage, usageOf(res.usageMetadata));
+    // A safety block won't improve on retry; stop and let the route answer with a refusal.
+    assertNotBlocked(res);
     const raw = res.text ?? "";
 
     let error: string;
@@ -238,6 +244,7 @@ export async function reviewAnswer(system: string, context: string, answer: Tuto
       model: m,
       contents: [{ role: "user", parts: [{ text: `${context}\n\n<tutor_answer>\n${JSON.stringify(answer.blocks)}\n</tutor_answer>` }] }],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         systemInstruction: system,
         responseMimeType: "application/json",
         responseJsonSchema: {

@@ -1,4 +1,5 @@
 import { GoogleGenAI, ThinkingLevel, type Part } from "@google/genai";
+import { SAFETY_SETTINGS } from "@/lib/ai/guard";
 import { z } from "zod";
 import { recordUsage, usageFrom } from "@/lib/ai/meter";
 import { withModelFallback } from "@/lib/ai/retry";
@@ -110,6 +111,7 @@ ${opts.existingConcepts.length ? `The course already has these concepts; reuse t
       model: m,
       contents: [{ role: "user", parts }],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         responseMimeType: "application/json",
         responseJsonSchema: jsonSchema,
         temperature: 0.2,
@@ -150,6 +152,7 @@ For each course concept this lecture teaches, give the second where its main exp
         },
       ],
       config: {
+        safetySettings: SAFETY_SETTINGS,
         responseMimeType: "application/json",
         responseJsonSchema: {
           type: "array",

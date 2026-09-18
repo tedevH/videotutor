@@ -3,6 +3,7 @@ import { lastTutorReply, learnFromTurn } from "@/lib/brain/observe";
 import { studentModelSummary } from "@/lib/brain/profile";
 import { signFrameUrls, uploadFrame } from "@/lib/frames";
 import { qualifyReferral } from "@/lib/referrals";
+import { refusalResponse, SAFETY_REFUSAL, SafetyBlockedError, screenQuestion } from "@/lib/ai/guard";
 import { mediaForVideo, VIDEO_MEDIA_COLUMNS, type VideoRow } from "@/lib/media";
 import { planFor } from "@/lib/entitlements";
 import { PLANS } from "@/lib/plans";
@@ -50,6 +51,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     .eq("id", sessionId)
     .maybeSingle();
   if (!session) return NextResponse.json({ error: "Session not found" }, { status: 404 });
+
+  // Obvious attacks (asking for keys, prompt injection, harmful how-tos) never reach the model
+  // and don't use up one of the student's questions.
+  const verdict = screenQuestion(question);
+  if (!verdict.ok) {
+    console.warn("guard declined a question", { userId: user.id, sessionId, reason: verdict.reason });
+    return declined(supabase, sessionId, question, verdict.reply);
+  }
 
   const videoRow = session.videos as unknown as VideoRow | null;
   // Homework sessions: the page the student is on, and the problems printed on it.
@@ -139,7 +148,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       : [],
   };
 
-  const { response, model, usage } = await runTutor({
+  let run: Awaited<ReturnType<typeof runTutor>>;
+  try {
+    run = await runTutor({
     media,
     live: media || !videoRow ? null : live,
     timestamp,
@@ -169,7 +180,18 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       previousTutorReply?.awaiting_student && previousTutorReply.context_cache && Math.abs(previousTutorReply.context_cache.timestamp - timestamp) < 5
         ? previousTutorReply.context_cache
         : null,
-  });
+    });
+  } catch (err) {
+    if (!(err instanceof SafetyBlockedError)) throw err;
+    console.warn("safety filter declined a question", { userId: user.id, sessionId, reason: err.message });
+    const { data: refusal } = await supabase
+      .from("messages")
+      .insert({ session_id: sessionId, role: "assistant", video_timestamp: videoRow ? Math.floor(timestamp) : null, content: refusalResponse(SAFETY_REFUSAL) })
+      .select()
+      .single();
+    return NextResponse.json({ messages: await signFrameUrls([userMsg, refusal]) });
+  }
+  const { response, model, usage } = run;
 
   // Update the student model after responding; it doesn't need to slow the answer down.
   after(() =>
@@ -224,4 +246,16 @@ async function worksheetContext(supabase: Awaited<ReturnType<typeof createClient
     .join("\n\n");
 
   return { title: assignment.title, graded: assignment.kind === "quiz" || assignment.kind === "exam", text };
+}
+
+/** Records a declined question and Lumo's refusal, without calling the model or counting usage. */
+async function declined(supabase: Awaited<ReturnType<typeof createClient>>, sessionId: string, question: string, reply: string) {
+  const { data: userMsg, error } = await supabase.from("messages").insert({ session_id: sessionId, role: "user", video_timestamp: null, content: { text: question } }).select().single();
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  const { data: assistantMsg } = await supabase
+    .from("messages")
+    .insert({ session_id: sessionId, role: "assistant", video_timestamp: null, content: refusalResponse(reply) })
+    .select()
+    .single();
+  return NextResponse.json({ messages: await signFrameUrls([userMsg, assistantMsg]) });
 }

@@ -1,4 +1,5 @@
 import { GoogleGenAI, MediaResolution, ThinkingLevel, Type } from "@google/genai";
+import { SAFETY_SETTINGS } from "@/lib/ai/guard";
 import { withModelFallback } from "@/lib/ai/retry";
 import { videoIndex, type VideoIndex } from "@/lib/tutor/schema";
 import type { Media } from "@/lib/media";
@@ -75,6 +76,7 @@ export async function indexVideo(
           },
         ],
         config: {
+          safetySettings: SAFETY_SETTINGS,
           mediaResolution: MediaResolution.MEDIA_RESOLUTION_LOW,
           responseMimeType: "application/json",
           responseSchema,
