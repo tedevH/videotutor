@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AppNav } from "@/components/app-nav";
 import { InviteFriends } from "@/components/invite-friends";
 import { PricingCards } from "@/components/pricing-cards";
 import { effectivePlan } from "@/lib/entitlements";
@@ -16,16 +17,21 @@ export default async function PricingPage() {
 
   return (
     <main className="graph-paper flex flex-1 flex-col text-ink">
-      <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
-        <Link href={user ? "/home" : "/"} className="text-xl font-semibold tracking-tight">
-          LumoTutor
-        </Link>
-        {!user && (
+      {user ? (
+        // Signed in: the same tabs as the rest of the app, with Pricing highlighted.
+        <div className="mx-auto w-full max-w-6xl px-4 py-6">
+          <AppNav current="/pricing" />
+        </div>
+      ) : (
+        <header className="mx-auto flex w-full max-w-6xl items-center justify-between px-4 py-5 sm:px-6">
+          <Link href="/" className="text-xl font-semibold tracking-tight">
+            LumoTutor
+          </Link>
           <Link href="/login?next=/pricing" className="rounded-full bg-ink px-4 py-2 text-sm font-medium text-white hover:bg-ink/85">
             Sign in
           </Link>
-        )}
-      </header>
+        </header>
+      )}
       <section className="mx-auto w-full max-w-6xl px-4 pb-24 pt-8 sm:px-6">
         <p className="text-center text-sm font-semibold text-pen">LumoTutor Plus · $9.99/month</p>
         <h1 className="mt-2 text-center text-[36px] font-semibold leading-tight tracking-tight sm:text-[52px]">Your personal AI teacher for every class.</h1>
