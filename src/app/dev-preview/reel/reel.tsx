@@ -17,15 +17,17 @@ export const REEL_W = 1920;
 export const REEL_H = 1080;
 
 const SCENES = {
-  intro: [0, 3200],
-  lecture: [3200, 19400],
-  board: [19400, 38400],
-  homework: [38400, 50400],
-  outro: [50400, 55000],
+  intro: [0, 2200],
+  lecture: [2200, 12300],
+  board: [12300, 23300],
+  homework: [23300, 30300],
+  outro: [30300, 33000],
 } as const;
+/** The lecture clip runs this much faster than on the landing page; the scene ends just after it draws. */
+const LECTURE_SPEED = 1.5;
 export const REEL_MS = SCENES.outro[1];
 
-const TYPE_MS = 38;
+const TYPE_MS = 24;
 const noop = () => {};
 
 const msg = (id: string, role: "user" | "assistant", content: unknown): StoredMessage => ({
@@ -90,10 +92,10 @@ function fadeIn(t: number, at: number, ms = 450) {
 function Intro({ t }: { t: number }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-      <p className="text-[34px] font-medium text-ink/60" style={{ opacity: fadeIn(t, 100) }}>
+      <p className="text-[34px] font-medium text-ink/60" style={{ opacity: fadeIn(t, 50, 300) }}>
         Stuck at 1am with a lecture that makes no sense?
       </p>
-      <h1 className="mt-6 text-[104px] font-semibold leading-none tracking-tight" style={{ opacity: fadeIn(t, 1100), transform: `translateY(${(1 - fadeIn(t, 1100)) * 24}px)` }}>
+      <h1 className="mt-6 text-[104px] font-semibold leading-none tracking-tight" style={{ opacity: fadeIn(t, 650, 350), transform: `translateY(${(1 - fadeIn(t, 650, 350)) * 24}px)` }}>
         Just ask <span className="text-pen">Lumo</span>.
       </h1>
     </div>
@@ -133,7 +135,7 @@ function LectureScene({ t }: { t: number }) {
       <Caption n={1} text="Pause any lecture and ask about that exact moment" t={t} />
       <Window url="lumotutor.com/watch" className="left-[200px] top-[140px] h-[870px] w-[1520px]">
         <div className="p-4">
-          <DemoVideo />
+          <DemoVideo speed={LECTURE_SPEED} />
         </div>
       </Window>
     </>
@@ -141,17 +143,17 @@ function LectureScene({ t }: { t: number }) {
 }
 
 function BoardScene({ t }: { t: number }) {
-  const q1At = 600;
-  const a1At = q1At + fixtures.q1.length * TYPE_MS + 1400;
-  const q2At = a1At + 5600;
-  const a2At = q2At + fixtures.q2.length * TYPE_MS + 1300;
+  const q1At = 300;
+  const a1At = q1At + fixtures.q1.length * TYPE_MS + 700;
+  const q2At = a1At + 3300;
+  const a2At = q2At + fixtures.q2.length * TYPE_MS + 700;
 
   const messages: StoredMessage[] = [];
-  if (t >= q1At) messages.push(msg("q1", "user", { text: t < a1At - 1400 ? typed(fixtures.q1, t, q1At) : fixtures.q1 }));
+  if (t >= q1At) messages.push(msg("q1", "user", { text: t < a1At - 700 ? typed(fixtures.q1, t, q1At) : fixtures.q1 }));
   if (t >= a1At) messages.push(msg("a1", "assistant", fixtures.r1));
-  if (t >= q2At) messages.push(msg("q2", "user", { text: t < a2At - 1300 ? typed(fixtures.q2, t, q2At) : fixtures.q2 }));
+  if (t >= q2At) messages.push(msg("q2", "user", { text: t < a2At - 700 ? typed(fixtures.q2, t, q2At) : fixtures.q2 }));
   if (t >= a2At) messages.push(msg("a2", "assistant", fixtures.r2));
-  const thinking = (t >= a1At - 1400 && t < a1At) || (t >= a2At - 1300 && t < a2At);
+  const thinking = (t >= a1At - 700 && t < a1At) || (t >= a2At - 700 && t < a2At);
   // Rebuild the board only when an answer lands, like the real page: a new ops array restarts the drawing.
   const answers = (t >= a1At ? 1 : 0) + (t >= a2At ? 1 : 0);
   const board = useMemo(
@@ -169,7 +171,7 @@ function BoardScene({ t }: { t: number }) {
               title={board?.title ?? "Draw a problem, a diagram, or your attempt, then ask Lumo"}
               ops={board?.ops ?? []}
               steps={board?.steps ?? []}
-              stepMs={900}
+              stepMs={650}
             />
           </div>
           <ChatPane messages={messages.map(withoutBoard)} thinking={thinking} />
@@ -187,15 +189,15 @@ function withoutBoard(m: StoredMessage): StoredMessage {
 }
 
 function HomeworkScene({ t }: { t: number }) {
-  const inkAt = 400;
-  const qAt = 2600;
-  const aAt = qAt + fixtures.q3.length * TYPE_MS + 1500;
-  const ink = Math.min(1, Math.max(0, (t - inkAt) / 1600));
+  const inkAt = 200;
+  const qAt = 1300;
+  const aAt = qAt + fixtures.q3.length * TYPE_MS + 800;
+  const ink = Math.min(1, Math.max(0, (t - inkAt) / 900));
 
   const messages: StoredMessage[] = [];
-  if (t >= qAt) messages.push(msg("q3", "user", { text: t < aAt - 1500 ? typed(fixtures.q3, t, qAt) : fixtures.q3 }));
+  if (t >= qAt) messages.push(msg("q3", "user", { text: t < aAt - 800 ? typed(fixtures.q3, t, qAt) : fixtures.q3 }));
   if (t >= aAt) messages.push(msg("a3", "assistant", fixtures.r3));
-  const thinking = t >= aAt - 1500 && t < aAt;
+  const thinking = t >= aAt - 800 && t < aAt;
   const pageScale = 820 / WORKSHEET_H;
 
   return (
@@ -239,10 +241,10 @@ function ChatPane({ messages, thinking }: { messages: StoredMessage[]; thinking:
 function Outro({ t }: { t: number }) {
   return (
     <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-      <h2 className="text-[88px] font-semibold leading-none tracking-tight" style={{ opacity: fadeIn(t, 100) }}>
+      <h2 className="text-[88px] font-semibold leading-none tracking-tight" style={{ opacity: fadeIn(t, 50, 300) }}>
         lumotutor<span className="text-pen">.com</span>
       </h2>
-      <p className="mt-8 text-[36px] text-ink/70" style={{ opacity: fadeIn(t, 700) }}>
+      <p className="mt-8 text-[36px] text-ink/70" style={{ opacity: fadeIn(t, 400, 300) }}>
         Your personal AI teacher for every class. Free to start.
       </p>
     </div>

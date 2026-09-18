@@ -47,7 +47,8 @@ function cameraTransform({ focus, scale }: { focus: Rect | null; scale: number }
 
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, "0")}`;
 
-export function DemoVideo() {
+/** `speed` > 1 plays the loop faster (the demo reel uses it; the landing page plays at 1). */
+export function DemoVideo({ speed = 1 }: { speed?: number } = {}) {
   const outer = useRef<HTMLDivElement>(null);
   const [fit, setFit] = useState(0.5);
   const [t, setT] = useState(0);
@@ -69,9 +70,9 @@ export function DemoVideo() {
 
   useEffect(() => {
     if (!playing || !visible) return;
-    const id = setInterval(() => setT((v) => (v + TICK_MS) % LOOP_MS), TICK_MS);
+    const id = setInterval(() => setT((v) => (v + TICK_MS * speed) % LOOP_MS), TICK_MS);
     return () => clearInterval(id);
-  }, [playing, visible]);
+  }, [playing, visible, speed]);
 
   // Derived scene state
   const typedChars = t < 3900 ? 0 : Math.min(QUESTION.length, Math.floor((t - 3900) / 75));
