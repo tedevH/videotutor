@@ -109,7 +109,8 @@ export function Whiteboard({
   }
   const [autoplay, setAutoplay] = useState(true);
   const [run, setRun] = useState(0);
-  const [drawing, setDrawing] = useState(false);
+  // A blank board is for drawing: start with the pen on, so the first drag just works.
+  const [drawing, setDrawing] = useState(allowDrawing && ops.length === 0);
   const [strokes, setStrokes] = useState<Stroke[]>([]);
   const [penColor, setPenColor] = useState("#1c1b19");
   const svgRef = useRef<SVGSVGElement>(null);
@@ -214,11 +215,17 @@ export function Whiteboard({
         key={run}
         ref={svgRef}
         viewBox={`0 0 ${W} ${height}`}
-        className={`block w-full touch-none select-none ${drawing ? "cursor-crosshair" : ""}`}
+        className={`block w-full touch-none select-none ${allowDrawing ? "cursor-crosshair" : ""}`}
         role="img"
         aria-label={title ?? "Whiteboard"}
         onPointerDown={(e) => {
-          if (!drawing) return;
+          if (!allowDrawing) return;
+          // Pressing on the board picks up the pen; nobody should have to find the button first.
+          if (!drawing) {
+            setDrawing(true);
+            setAutoplay(false);
+            setStep(maxStep);
+          }
           const p = toBoard(e);
           if (!p) return;
           (e.target as Element).setPointerCapture?.(e.pointerId);
@@ -227,7 +234,7 @@ export function Whiteboard({
           setStrokes((s) => [...s, stroke]);
         }}
         onPointerMove={(e) => {
-          if (!drawing || !active.current) return;
+          if (!active.current) return;
           const p = toBoard(e);
           if (!p) return;
           // Snapshot now: the state update runs later, possibly after pointer-up clears the ref.
