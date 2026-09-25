@@ -1,4 +1,4 @@
-import { limitsFor, type PlanId } from "@/lib/plans";
+import { GUEST_LIMITS, limitsFor, type PlanId } from "@/lib/plans";
 import { createAdminClient } from "@/lib/supabase/server";
 
 /** The plan a student can use right now: their subscription, or Plus while a referral trial runs. */
@@ -10,9 +10,16 @@ export function effectivePlan(profile: { plan?: string | null; plus_trial_until?
 }
 
 export async function planFor(userId: string) {
-  const { data } = await createAdminClient().from("profiles").select("plan, plus_trial_until, school_level").eq("id", userId).maybeSingle();
+  const { data } = await createAdminClient().from("profiles").select("plan, plus_trial_until, school_level, is_guest").eq("id", userId).maybeSingle();
   const plan = effectivePlan(data);
-  return { plan, limits: limitsFor(plan), schoolLevel: data?.school_level ?? "college", onTrial: plan === "plus" && data?.plan !== "plus" };
+  const isGuest = !!data?.is_guest;
+  return {
+    plan,
+    isGuest,
+    limits: isGuest ? GUEST_LIMITS : limitsFor(plan),
+    schoolLevel: data?.school_level ?? "college",
+    onTrial: plan === "plus" && data?.plan !== "plus",
+  };
 }
 
 const startOfMonth = () => {

@@ -118,6 +118,25 @@ export const PLANS: Record<
 
 export const PAID_PLANS: PaidPlanId[] = ["plus", "pro"];
 
+/**
+ * What someone gets before making an account. Enough to see Lumo work on a real problem, and
+ * costed so a stranger clicking around can't run up a bill: no lecture indexing, no uploads.
+ */
+export const GUEST_QUESTIONS = 8;
+export const GUEST_LIMITS: PlanLimits = {
+  lecturesPerMonth: 0,
+  lectureHoursPerMonth: null,
+  tutorQuestionsPerDay: GUEST_QUESTIONS,
+  tutorQuestionsPerMonth: GUEST_QUESTIONS,
+  assignmentsPerMonth: 0,
+  practiceProblemsPerDay: 0,
+  practiceProblemsPerMonth: 0,
+  voice: false,
+  verifiedMath: false,
+  examPrep: false,
+  bestModels: false,
+};
+
 export function lookupKeyFor(plan: PaidPlanId, interval: BillingInterval) {
   const p = PLANS[plan];
   return (interval === "year" ? p.yearly : p.monthly)!.lookupKey;

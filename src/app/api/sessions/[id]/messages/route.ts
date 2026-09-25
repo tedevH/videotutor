@@ -77,6 +77,15 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     db.from("usage_events").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("kind", "tutor").gte("created_at", startOfMonth),
   ]);
   const monthlyLimit = entitlement.limits.tutorQuestionsPerMonth;
+  if (entitlement.isGuest && (usedThisMonth ?? 0) >= monthlyLimit) {
+    return NextResponse.json(
+      {
+        error: `That's ${monthlyLimit} questions on a guest account. Create a free account to keep this conversation and get ${PLANS.free.limits.tutorQuestionsPerMonth} questions a month.`,
+        signup: true,
+      },
+      { status: 429 },
+    );
+  }
   if ((usedThisMonth ?? 0) >= monthlyLimit) {
     return NextResponse.json(
       {

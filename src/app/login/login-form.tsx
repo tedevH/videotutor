@@ -55,6 +55,20 @@ export function LoginForm({ next, initialMode = "signin" }: { next: string; init
         setBusy(false);
         return setError("Use at least 8 characters.");
       }
+      // A guest upgrading keeps the same user row, so the work they already did comes with them.
+      const {
+        data: { user: current },
+      } = await supabase.auth.getUser();
+      if (current?.is_anonymous) {
+        const { error: upgradeError } = await supabase.auth.updateUser({ email, password });
+        setBusy(false);
+        if (!upgradeError) return finishSignIn();
+        if (/already|registered|exists/i.test(upgradeError.message)) {
+          setMode("signin");
+          return setError("You already have an account with this email. Sign in and we'll keep that account's work.");
+        }
+        return setError(upgradeError.message);
+      }
       const { data, error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: callbackUrl(next) } });
       setBusy(false);
       if (error) return setError(error.message);

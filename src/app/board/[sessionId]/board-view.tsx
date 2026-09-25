@@ -7,7 +7,13 @@ import { Thinking, TutorMessage, UserBubble } from "@/components/chat/messages";
 import type { BoardOp, StoredMessage, TutorResponse } from "@/lib/tutor/schema";
 
 /** Lumo as a teacher at a whiteboard: the board is the main surface, conversation on the side. */
-export function BoardView(props: { sessionId: string; initialMode: "socratic" | "direct"; initialMessages: StoredMessage[] }) {
+export function BoardView(props: {
+  sessionId: string;
+  initialMode: "socratic" | "direct";
+  initialMessages: StoredMessage[];
+  /** Set when nobody has signed up yet: their work is real, but it needs an account to survive. */
+  guest?: { questionsAllowed: number } | null;
+}) {
   const [messages, setMessages] = useState(props.initialMessages);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -21,6 +27,7 @@ export function BoardView(props: { sessionId: string; initialMode: "socratic" | 
   }, [messages.length, sending]);
 
   const latestBoard = latestBoardOf(messages);
+  const askedCount = messages.filter((m) => m.role === "user").length;
 
   async function send(text: string, drawing?: string) {
     const question = text.trim();
@@ -85,6 +92,18 @@ export function BoardView(props: { sessionId: string; initialMode: "socratic" | 
       </section>
 
       <aside className="flex min-h-0 flex-1 flex-col border-t border-line bg-white lg:max-w-[460px] lg:border-l lg:border-t-0">
+        {props.guest && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-line bg-[#fff8e6] px-4 py-2 text-xs">
+            <span>
+              {askedCount >= props.guest.questionsAllowed
+                ? "That's your free questions used."
+                : `Trying Lumo · ${Math.max(0, props.guest.questionsAllowed - askedCount)} of ${props.guest.questionsAllowed} questions left`}
+            </span>
+            <Link href={`/login?next=/board/${props.sessionId}`} className="rounded-full bg-ink px-3 py-1 font-medium text-white">
+              Save my work
+            </Link>
+          </div>
+        )}
         <div className="flex items-center justify-between border-b border-line px-4 py-2 text-xs">
           <span className="font-semibold">Lumo</span>
           <div className="flex rounded-full bg-stone-100 p-0.5">

@@ -110,7 +110,12 @@ export default async function Home() {
             <div className="mt-6">
               <AddVideoForm signedIn={false} />
             </div>
-            <p className="mt-2 text-sm text-muted">Free to start. Works for every subject.</p>
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+              <Link href="/try" className="rounded-full border-2 border-ink bg-white px-5 py-2.5 font-medium shadow-[3px_3px_0_#1c1b19] hover:bg-stone-50">
+                Or try it now, no account →
+              </Link>
+              <span className="text-sm text-muted">Ask about any problem. Nothing to sign up for.</span>
+            </div>
           </div>
         </div>
       </section>
