@@ -86,6 +86,9 @@ export default async function Home() {
           <Link href="/pricing" className="hover:underline">
             Pricing
           </Link>
+          <Link href="/blog" className="hover:underline">
+            Blog
+          </Link>
           <Link href="/login" className="rounded-full bg-ink px-4 py-2 font-medium text-white hover:bg-ink/85">
             Sign in
           </Link>
@@ -295,6 +298,9 @@ export default async function Home() {
         <nav className="flex flex-wrap items-center gap-4">
           <Link href="/pricing" className="hover:text-ink">
             Pricing
+          </Link>
+          <Link href="/blog" className="hover:text-ink">
+            Blog
           </Link>
           <Link href="/terms" className="hover:text-ink">
             Terms
